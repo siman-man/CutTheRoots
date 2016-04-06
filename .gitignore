@@ -1,0 +1,7 @@
+.DS_Store
+*.swp
+CutTheRoots
+*.png
+visualizer/.idea
+visualizer/out
+visualizer/visualizer.iml
