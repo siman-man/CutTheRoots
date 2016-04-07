@@ -6,7 +6,7 @@ end
 
 task :run do
   system("g++ -W -Wall -Wno-sign-compare -O2 -o #{@filename} #{@filename}.cpp")
-  system("java -jar ./visualizer.jar -size 8 -vis -save result.png -seed 7 -exec './#{@filename}'")
+  system("java -jar ./visualizer.jar -size 8 -vis -save result.png -seed 1 -exec './#{@filename}'")
   #system("java -jar ./#{@filename}Vis.jar -side 12 -seed 105 -exec './#{@filename}'")
 end
 
@@ -17,7 +17,7 @@ end
 
 task :one do
   system("g++ -W -Wall -Wno-sign-compare -O2 -o #{@filename} #{@filename}.cpp")
-  system("time java -jar visualizer.jar -seed 1 -novis -exec './#{@filename}'")
+  system("time java -jar visualizer.jar -seed 1 -save result.png -novis -exec './#{@filename}'")
 end
 
 task :two do
