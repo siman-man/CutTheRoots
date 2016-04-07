@@ -3,14 +3,13 @@ Problem: CutTheRoots
 
 Problem Statement
 問題文
-Several seeds were planted in one jar. The grown-up plants have to be separated and moved to other jars, 
-幾つかの植物の種が1つのツボの中に植えれらています。植物が育つと他のツボに移さなければいけません
-one plant per jar. While growing, the plants developed a massive intertwining root system which has to
-成長中は様々な組み合わせによってダメージを受けてしまいます
-be separated as well with as little damage as possible. 
+Several seeds were planted in one jar. The grown-up plants have to be separated and moved to other jars, one plant per jar.
+いくつかの植物の種が1つのツボの中に植えれらています。成長した植物は1つのツボにつき1つの植物となるように他のツボに移さなければいけません
+While growing, the plants developed a massive intertwining root system which has to be separated as well with as little damage as possible. 
+成長していく中で、巨大に絡み合った根系を形成した植物をなるべく最小のダメージで切り離す必要があります。
 
 The jar with plants is represented as a circle on a plane. Each plant is represented as a 2D root system, 
-ツボの中の植物は平面で円形で表現されます. 各植物は平面の根系を持ちます
+ツボの中の植物は平面上の円形で表現されます. 各植物は平面の根系を持ちます
 
 since we are not interested in its stem (it doesn't need to be cut when the plants are separated). 
 幹については考慮しなくて良いです
@@ -21,14 +20,13 @@ Each root grows either from the base point of a plant or from the end of another
 各根っこは他の根っこから伸びて成長していきます
 
 To separate the plants, you need to cut the soil in the jar. 
-植物を分けるためには、あなたはツボから土を運ぶ必要があります。
+植物を分けるためには、あなたはツボから土ごと切り分ける必要があります。
 Each cut is modeled as an infinite straight line which goes through points (X1, Y1) and (X2, Y2). 
-切り取る際には無限の長さの直線(X1, Y1)から(X2, Y2)を使用します
+切り取る際には(X1, Y1)と(X2, Y2)の2点を通る無限の長さの直線が使用されます
 Cut lines cut every root they intersect. 
 その線で横切られた根っこは切り取られます
 Two plants are considered to be separated as long as there exists at least one line which separates their base points. 
-少なくとも1つ以上の根っこが存在している場合は、植物同士を分けることは出来ません
-
+二つの植物は、その基点を分離する少なくとも1つのラインが存在するように分離することが考えられています
 
 Your code must implement a single method int[] makeCuts(int NP, int[] points, int[] roots). 
 あなたは次のメソッドmakeCutsを実装します。
@@ -87,6 +85,10 @@ Method signature: vector <int> makeCuts(int NP, vector <int> points, vector <int
  
 Notes
 - This match is rated.
+この試合はレートがつきます
 - The time limit is 10 seconds and the memory limit is 1024MB for a single test case.
+制限時間は10秒です、メモリの制限は1024MBです
 - The number of plants (NP) will be less than 105 and there will be at least 5 plants. There will be less than 105000 roots and at least 50.
+NPの値は最大で105、最小で5の値をとります。根っこは最大で105000、最小で50の値を取ります
 - X1,Y1,X2 and Y2 must be between 0 and 1024. All plant and root coordinates will also fall within this range.
+X1,Y1,X2,Y2の値は最大で1024、最小で0の値をとります、この範囲外の値は無効となります。

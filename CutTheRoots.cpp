@@ -34,10 +34,15 @@ class CutTheRoots {
 
       sort(xs.begin(), xs.end());
       sort(ys.begin(), ys.end());
-      vector<int> ret(8 * (NP - 1));
+      vector<int> ret(4 * (NP - 1));
       for (int i = 0; i < NP - 1; ++i) {
         int x = (xs[i] + xs[i + 1]) / 2;
         int y = (ys[i] + ys[i + 1]) / 2;
+        ret[4 * i] = x;
+        ret[4 * i + 1] = 0;
+        ret[4 * i + 2] = x;
+        ret[4 * i + 3] = 1024;
+        /*
         ret[8 * i] = x;
         ret[8 * i + 1] = 0;
         ret[8 * i + 2] = x;
@@ -47,6 +52,7 @@ class CutTheRoots {
         ret[8 * i + 5] = y;
         ret[8 * i + 6] = 1024;
         ret[8 * i + 7] = y;
+        */
       }
       return ret;
     }

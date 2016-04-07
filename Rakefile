@@ -12,7 +12,7 @@ end
 
 task :windows do
   system("g++ -W -Wall -Wno-sign-compare -O2 -o #{@filename} #{@filename}.cpp")
-  system("java -jar ./visualizer.jar -seed 4 -exec './#{@filename}.exe'")
+  system("java -jar ./visualizer.jar -vis -save result.png -seed 1 -exec ./#{@filename}.exe")
 end
 
 task :one do
