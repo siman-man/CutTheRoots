@@ -355,7 +355,7 @@ struct Root {
   int to;
   int depth;
   int value;
-  int parent;
+  int aid;
   int removed;
 
   Root(int from = -1, int to = -1) {
@@ -363,7 +363,7 @@ struct Root {
     this->to = to;
 
     this->depth = 0;
-    this->parent = -1;
+    this->aid = -1;
     this->value = 0;
     this->removed = 0;
   }
@@ -407,9 +407,12 @@ class CutTheRoots {
         }
       }
 
-      int depthLimit = 2;
+      int depthLimit = 3;
 
       if (NP <= 50) {
+        depthLimit++;
+      }
+      if (NP <= 30) {
         depthLimit++;
       }
       if (NP <= 15) {
@@ -443,7 +446,8 @@ class CutTheRoots {
         root.depth = to->depth;
         rootList[i] = root;
 
-        if (to->depth <= depthLimit) {
+        if (to->depth <= depthLimit && dist > 5) {
+          rootList[i].aid = g_aliveRootSize;
           g_aliveRootSize++;
           aliveRootList.push_back(root);
         }
@@ -490,7 +494,7 @@ class CutTheRoots {
       }
 
       int esize = edgeList.size();
-      int crossLimit = 3;
+      int crossLimit = 2;
 
       for(int i = 0; i < NP-1; i++) {
         Vector v1 = vertexList[i];
@@ -525,7 +529,7 @@ class CutTheRoots {
       fprintf(stderr, "edge size = %d, root size = %d\n", g_edgeListSize, rsize);
       vector<Line> lines;
 
-      for(int i = 0; i < 4 * NP; i++) {
+      for(int i = 0; i < NP; i++) {
         Line line = getBestLine();
 
         if (line.fromY == -1) {
@@ -538,11 +542,15 @@ class CutTheRoots {
         removeEdge(line);
 
         lines.push_back(line);
+        lines = cleanLine(lines);
       }
 
       lines = cleanLine(lines);
+      int lsize = lines.size();
 
-      for(int i = 0; i < lines.size(); i++) {
+      fprintf(stderr,"line size = %d\n", lsize);
+
+      for(int i = 0; i < lsize; i++) {
         Line line = lines[i];
 
         ret.push_back(line.fromX);
@@ -557,8 +565,26 @@ class CutTheRoots {
     Line getBestLine() {
       Line bestLine;
       int maxValue = INT_MIN;
+      int limit = 100;
 
-      for(int i = 0; i < 100; i++) {
+      if (g_NP <= 75) {
+        limit = 200;
+      }
+      if (g_NP <= 60) {
+        limit = 300;
+      }
+      if (g_NP <= 40) {
+        limit = 400;
+      }
+      if (g_NP <= 25) {
+        limit = 800;
+      }
+      if (g_NP <= 20) {
+        limit = 1000;
+      }
+
+      for(int i = 0; i < limit; i++) {
+        /*
         int idA = xor128() % g_edgeListSize;
         int idB = xor128() % g_edgeListSize;
 
@@ -570,11 +596,18 @@ class CutTheRoots {
         Edge *edgeA = getEdge(idA);
         Edge *edgeB = getEdge(idB);
 
-        int cyA = (edgeA->fromY + edgeA->toY) / 2;
-        int cxA = (edgeA->fromX + edgeA->toX) / 2;
+        int cyA = (edgeA->fromY + edgeA->toY) / 2 + xor128()%300 - 150;
+        int cxA = (edgeA->fromX + edgeA->toX) / 2 + xor128()%300 - 150;
 
-        int cyB = (edgeB->fromY + edgeB->toY) / 2;
-        int cxB = (edgeB->fromX + edgeB->toX) / 2;
+        int cyB = (edgeB->fromY + edgeB->toY) / 2 + xor128()%300 - 150;
+        int cxB = (edgeB->fromX + edgeB->toX) / 2 + xor128()%300 - 150;
+        */
+
+        int cyA = xor128()%MAX_H;
+        int cxA = xor128()%MAX_W;
+
+        int cyB = xor128()%MAX_H;
+        int cxB = xor128()%MAX_W;
 
         Edge edgeC(cyA, cxA, cyB, cxB);
         Line line = edge2line(edgeC);
@@ -582,7 +615,7 @@ class CutTheRoots {
         int removeValue = 0;
         removeValue = removeRoot(line, true);
         int removeCount = removeEdge(line, true);
-        int eval = 100 * removeCount - removeValue/10;
+        int eval = 200 * removeCount - removeValue/10;
 
         if(removeCount > 0 && maxValue < eval) {
           maxValue = eval;
@@ -609,7 +642,7 @@ class CutTheRoots {
         }
       }
 
-      fprintf(stderr,"clean line count = %d\n", cleanCount);
+      //fprintf(stderr,"clean line count = %d\n", cleanCount);
 
       return result;
     }
@@ -691,7 +724,7 @@ class CutTheRoots {
 
           if (!evalMode) {
             root->removed++;
-            //cleanRoot(root->to);
+            cleanRoot(root->to);
           }
         }
       }
@@ -725,7 +758,9 @@ class CutTheRoots {
         int rid = v->neighbor[i];
 
         if (g_aliveRootSize <= rid) continue;
-        Root *root = getAliveRoot(rid);
+        Root *r = getRoot(rid);
+        if (r->aid < 0) continue;
+        Root *root = getAliveRoot(r->aid);
         root->removed++;
 
         cleanRoot(root->to);
