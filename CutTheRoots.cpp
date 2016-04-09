@@ -42,12 +42,14 @@ class Vector {
   public:
     int id;
     int value;
+    int dist;
     int depth;
     double x, y;
     vector<int> neighbor;
 
     Vector(double y = 0.0, double x = 0.0) {
       this->value = 0;
+      this->dist = 0;
       this->depth = 0;
       this->y = y;
       this->x = x;
@@ -333,7 +335,7 @@ struct Edge {
   int toY;
   int toX;
   int depth;
-  bool removed;
+  int removed;
   ll hashCode;
 
   Edge(int fromY = -1, int fromX = -1, int toY = -1, int toX = -1) {
@@ -343,7 +345,7 @@ struct Edge {
     this->toX = toX;
 
     this->depth = 0;
-    this->removed = false;
+    this->removed = 0;
 
     this->hashCode = randomNum[fromY] ^ randomNum[fromX] ^ randomNum[toY] ^ randomNum[toX];
   }
@@ -356,7 +358,7 @@ struct Root {
   int depth;
   int value;
   int parent;
-  bool removed;
+  int removed;
 
   Root(int from = -1, int to = -1) {
     this->from = from;
@@ -365,13 +367,16 @@ struct Root {
     this->depth = 0;
     this->parent = -1;
     this->value = 0;
-    this->removed = false;
+    this->removed = 0;
   }
 };
 
 int g_NP;
 vector<Edge> edgeList;
-vector<Root> rootList;
+vector<Root> aliveRootList;
+Root rootList[105000];
+int rootListSize;
+int g_aliveRootSize;
 
 class CutTheRoots {
   public:
@@ -385,6 +390,7 @@ class CutTheRoots {
 
       g_NP = NP;
       int PS = points.size()/2;
+      rootListSize = roots.size()/2;
       set<Vector> vertices;
       set<Triangle> triangles;
 
@@ -402,13 +408,16 @@ class CutTheRoots {
         }
       }
 
-      int limitDepth = 1;
+      int depthLimit = 2;
 
-      if (NP < 50) {
-        limitDepth = 2;
+      if (NP <= 50) {
+        depthLimit++;
       }
-      if (NP < 20) {
-        limitDepth = 3;
+      if (NP <= 15) {
+        depthLimit++;
+      }
+      if (NP <= 10) {
+        depthLimit++;
       }
 
       for (int i = NP; i < PS; i++) {
@@ -425,15 +434,19 @@ class CutTheRoots {
 
         Root root(j, k);
         root.id = i;
-        int length = calcDistDetail(fromY, fromX, toY, toX);
-        from->neighbor.push_back(k);
-        to->value = from->value + length;
+        int dist = calcDistDetail(fromY, fromX, toY, toX);
+
+        from->neighbor.push_back(i);
+
+        to->dist = dist;
         to->depth = from->depth + 1;
 
-        if (to->depth <= limitDepth) {
-          root.depth = to->depth;
-          rootList.push_back(root);
-          //fprintf(stderr,"fromY = %d, fromX = %d, toY = %d, toX = %d\n", fromY, fromX, toY, toX);
+        root.depth = to->depth;
+        rootList[i] = root;
+
+        if (to->depth <= depthLimit) {
+          g_aliveRootSize++;
+          aliveRootList.push_back(root);
         }
       }
 
@@ -489,8 +502,9 @@ class CutTheRoots {
           Vector p2(newEdge.toY, newEdge.toX);
 
           int crossCount = 0;
+          int crossLimit = 3;
 
-          for(int k = 0; k < esize && crossCount <= 3; k++) {
+          for(int k = 0; k < esize && crossCount <= crossLimit; k++) {
             Edge *edge = getEdge(k);
             Vector p3(edge->fromY, edge->fromX);
             Vector p4(edge->toY, edge->toX);
@@ -500,17 +514,18 @@ class CutTheRoots {
             }
           }
 
-          if (crossCount <= 3) {
+          if (crossCount <= crossLimit) {
             edgeList.push_back(newEdge);
           }
         }
       }
 
       esize = edgeList.size();
-      int rsize = rootList.size();
+      int rsize = g_aliveRootSize;
       fprintf(stderr, "edge size = %d, root size = %d\n", esize, rsize);
+      vector<Line> lines;
 
-      for(int i = 0; i < 1 * esize; i++) {
+      for(int i = 0; i < 4 * NP; i++) {
         Line line = getBestLine();
 
         if (line.fromY == -1) {
@@ -521,6 +536,14 @@ class CutTheRoots {
 
         removeRoot(line);
         removeEdge(line);
+
+        lines.push_back(line);
+      }
+
+      lines = cleanLine(lines);
+
+      for(int i = 0; i < lines.size(); i++) {
+        Line line = lines[i];
 
         ret.push_back(line.fromX);
         ret.push_back(line.fromY);
@@ -548,8 +571,8 @@ class CutTheRoots {
         Edge *edgeA = getEdge(idA);
         Edge *edgeB = getEdge(idB);
 
-        int cyA = (edgeA->fromY + edgeA->toY) / 2 + (xor128()%20) - 10;
-        int cxA = (edgeA->fromX + edgeA->toX) / 2 + (xor128()%20) - 10;
+        int cyA = (edgeA->fromY + edgeA->toY) / 2;
+        int cxA = (edgeA->fromX + edgeA->toX) / 2;
 
         int cyB = (edgeB->fromY + edgeB->toY) / 2;
         int cxB = (edgeB->fromX + edgeB->toX) / 2;
@@ -560,7 +583,7 @@ class CutTheRoots {
         int removeValue = 0;
         removeValue = removeRoot(line, true);
         int removeCount = removeEdge(line, true);
-        int eval = 10000 * removeCount - removeValue/10;
+        int eval = 100 * removeCount - removeValue/10;
 
         if(removeCount > 0 && maxValue < eval) {
           maxValue = eval;
@@ -569,6 +592,27 @@ class CutTheRoots {
       }
 
       return bestLine;
+    }
+
+    vector<Line> cleanLine(vector<Line> lines) {
+      vector<Line> result;
+      int lsize = lines.size();
+      int cleanCount = 0;
+
+      for(int i = 0; i < lsize; i++) {
+        Line line = lines[i];
+
+        if (cleanEdge(line, true)) {
+          cleanEdge(line);
+          cleanCount++;
+        } else {
+          result.push_back(line);
+        }
+      }
+
+      fprintf(stderr,"clean line count = %d\n", cleanCount);
+
+      return result;
     }
 
     int removeEdge(Line line, bool evalMode = false) {
@@ -581,7 +625,7 @@ class CutTheRoots {
       for(int i = 0; i < esize; i++) {
         Edge *edge = getEdge(i);
 
-        if (edge->removed) {
+        if (edge->removed > 0 && evalMode) {
           continue;
         }
 
@@ -592,7 +636,7 @@ class CutTheRoots {
           removeCount++;
 
           if (!evalMode) {
-            edge->removed = true;
+            edge->removed++;
           }
         }
       }
@@ -600,17 +644,47 @@ class CutTheRoots {
       return removeCount;
     }
 
+    bool cleanEdge(Line line, bool evalMode = false) {
+      Vector p1(line.fromY, line.fromX);
+      Vector p2(line.toY, line.toX);
+
+      int esize = edgeList.size();
+
+      for(int i = 0; i < esize; i++) {
+        Edge *edge = getEdge(i);
+
+        if (edge->removed >= 2 && evalMode) {
+          continue;
+        }
+
+        Vector p3(edge->fromY, edge->fromX);
+        Vector p4(edge->toY, edge->toX);
+
+        if (intersect(p1, p2, p3, p4)) {
+          if (edge->removed == 1 && evalMode) {
+            return false;
+          }
+
+          if (!evalMode) {
+            edge->removed--;
+          }
+        }
+      }
+
+      return true;
+    }
+
     int removeRoot(Line line, bool evalMode = false) {
       int removeCount = 0;
       Vector p1(line.fromY, line.fromX);
       Vector p2(line.toY, line.toX);
 
-      int rsize = rootList.size();
+      int rsize = g_aliveRootSize;
 
       for(int i = 0; i < rsize; i++) {
-        Root *root = getRoot(i);
+        Root *root = getAliveRoot(i);
 
-        if (root->removed) {
+        if (root->removed > 0 && evalMode) {
           continue;
         }
 
@@ -621,7 +695,7 @@ class CutTheRoots {
           removeCount += max(p3.value, p4.value);
 
           if (!evalMode) {
-            root->removed = true;
+            root->removed++;
           }
         }
       }
@@ -629,50 +703,27 @@ class CutTheRoots {
       return removeCount;
     }
 
-    void searchRoot(int rootId) {
-      Vector *root = getVertex(rootId);
-      int nsize = root->neighbor.size();
-
-      //fprintf(stderr,"root.y = %d, root.x = %d, nsize = %d\n", (int)root->y, (int)root->x, nsize);
+    int searchRoot(int rootId) {
+      Vector *v = getVertex(rootId);
+      int nsize = v->neighbor.size();
+      int value = 0;
 
       for(int i = 0; i < nsize; i++) {
-        int n = root->neighbor[i];
-        int totalValue = 0;
+        int rid = v->neighbor[i];
+        Root *root = getRoot(rid);
 
-        queue<int> que;
-        que.push(n);
-
-        while(!que.empty()) {
-          int id = que.front(); que.pop();
-
-          Vector *v = getVertex(id);
-          totalValue += v->value;
-
-          int size = v->neighbor.size();
-          for(int j = 0; j < size; j++) {
-            int k = v->neighbor[j];
-            que.push(k);
-          }
-        }
-
-        que.push(n);
-
-        while(!que.empty()) {
-          int id = que.front(); que.pop();
-
-          Vector *v = getVertex(id);
-          v->value = totalValue - v->value;
-
-          int size = v->neighbor.size();
-          for(int j = 0; j < size; j++) {
-            int k = v->neighbor[j];
-            que.push(k);
-          }
-        }
+        value += searchRoot(root->to);
       }
+
+      value += v->dist;
+      v->value = value;
+
+      return value;
     }
 
     void init() {
+      g_aliveRootSize = 0;
+
       for(int i = 0; i < MAX_H+10; i++) {
         randomNum[i] = xor128();
       }
@@ -790,6 +841,10 @@ class CutTheRoots {
 
     Root* getRoot(int id) {
       return &rootList[id];
+    }
+
+    Root* getAliveRoot(int id) {
+      return &aliveRootList[id];
     }
 
     Vector* getVertex(int id) {
