@@ -334,7 +334,6 @@ struct Edge {
   int fromX;
   int toY;
   int toX;
-  int depth;
   int removed;
   ll hashCode;
 
@@ -344,7 +343,6 @@ struct Edge {
     this->toY = toY;
     this->toX = toX;
 
-    this->depth = 0;
     this->removed = 0;
 
     this->hashCode = randomNum[fromY] ^ randomNum[fromX] ^ randomNum[toY] ^ randomNum[toX];
@@ -377,6 +375,7 @@ vector<Root> aliveRootList;
 Root rootList[105000];
 int rootListSize;
 int g_aliveRootSize;
+int g_edgeListSize;
 
 class CutTheRoots {
   public:
@@ -491,6 +490,7 @@ class CutTheRoots {
       }
 
       int esize = edgeList.size();
+      int crossLimit = 3;
 
       for(int i = 0; i < NP-1; i++) {
         Vector v1 = vertexList[i];
@@ -502,7 +502,6 @@ class CutTheRoots {
           Vector p2(newEdge.toY, newEdge.toX);
 
           int crossCount = 0;
-          int crossLimit = 3;
 
           for(int k = 0; k < esize && crossCount <= crossLimit; k++) {
             Edge *edge = getEdge(k);
@@ -520,9 +519,10 @@ class CutTheRoots {
         }
       }
 
-      esize = edgeList.size();
+      g_edgeListSize = edgeList.size();
+
       int rsize = g_aliveRootSize;
-      fprintf(stderr, "edge size = %d, root size = %d\n", esize, rsize);
+      fprintf(stderr, "edge size = %d, root size = %d\n", g_edgeListSize, rsize);
       vector<Line> lines;
 
       for(int i = 0; i < 4 * NP; i++) {
@@ -555,17 +555,16 @@ class CutTheRoots {
     }
 
     Line getBestLine() {
-      int esize = edgeList.size();
       Line bestLine;
       int maxValue = INT_MIN;
 
       for(int i = 0; i < 100; i++) {
-        int idA = xor128() % esize;
-        int idB = xor128() % esize;
+        int idA = xor128() % g_edgeListSize;
+        int idB = xor128() % g_edgeListSize;
 
         while(idA == idB) {
-          idA = xor128() % esize;
-          idB = xor128() % esize;
+          idA = xor128() % g_edgeListSize;
+          idB = xor128() % g_edgeListSize;
         }
 
         Edge *edgeA = getEdge(idA);
@@ -620,9 +619,7 @@ class CutTheRoots {
       Vector p1(line.fromY, line.fromX);
       Vector p2(line.toY, line.toX);
 
-      int esize = edgeList.size();
-
-      for(int i = 0; i < esize; i++) {
+      for(int i = 0; i < g_edgeListSize; i++) {
         Edge *edge = getEdge(i);
 
         if (edge->removed > 0 && evalMode) {
@@ -648,9 +645,7 @@ class CutTheRoots {
       Vector p1(line.fromY, line.fromX);
       Vector p2(line.toY, line.toX);
 
-      int esize = edgeList.size();
-
-      for(int i = 0; i < esize; i++) {
+      for(int i = 0; i < g_edgeListSize; i++) {
         Edge *edge = getEdge(i);
 
         if (edge->removed >= 2 && evalMode) {
@@ -675,7 +670,7 @@ class CutTheRoots {
     }
 
     int removeRoot(Line line, bool evalMode = false) {
-      int removeCount = 0;
+      int removeValue = 0;
       Vector p1(line.fromY, line.fromX);
       Vector p2(line.toY, line.toX);
 
@@ -692,15 +687,16 @@ class CutTheRoots {
         Vector p4 = vertexList[root->to];
 
         if (intersect(p1, p2, p3, p4)) {
-          removeCount += max(p3.value, p4.value);
+          removeValue += max(p3.value, p4.value);
 
           if (!evalMode) {
             root->removed++;
+            //cleanRoot(root->to);
           }
         }
       }
 
-      return removeCount;
+      return removeValue;
     }
 
     int searchRoot(int rootId) {
@@ -719,6 +715,21 @@ class CutTheRoots {
       v->value = value;
 
       return value;
+    }
+
+    void cleanRoot(int rootId) {
+      Vector *v = getVertex(rootId);
+      int nsize = v->neighbor.size();
+
+      for(int i = 0; i < nsize; i++) {
+        int rid = v->neighbor[i];
+
+        if (g_aliveRootSize <= rid) continue;
+        Root *root = getAliveRoot(rid);
+        root->removed++;
+
+        cleanRoot(root->to);
+      }
     }
 
     void init() {
@@ -745,8 +756,6 @@ class CutTheRoots {
         toX = edge.toX;
       }
 
-      assert(fromX <= toX);
-
       int dy = toY - fromY;
       int dx = toX - fromX;
 
@@ -768,8 +777,6 @@ class CutTheRoots {
         //fprintf(stderr,"b = %d, c = %d, slope = %4.2f\n", b, c, slope);
 
         if (b < 0) {
-          assert(c >= 0);
-          assert(slope >= 0);
           line.fromY = 0;
           line.fromX = -1 * (int)(b / slope);
 
@@ -780,28 +787,21 @@ class CutTheRoots {
             line.toY = MAX_H;
             line.toX = (int)((MAX_W - b) / slope);
           }
-
-          assert(0 <= line.fromX && line.fromX <= MAX_W);
         } else if (0 <= b && b <= MAX_H) {
           line.fromY = b;
           line.fromX = 0;
 
           if (c < 0) {
-            assert(c < 0);
-            assert(slope < 0);
             line.toY = 0;
             line.toX = -1 * (int)(b / slope);
           } else if (0 <= c && c <= MAX_H) {
             line.toY = c;
             line.toX = MAX_W;
           } else {
-            assert(slope >= 0);
             line.toY = MAX_H;
             line.toX = (int)((MAX_W - b) / slope);
           }
         } else {
-          assert(c <= MAX_H);
-          assert(slope < 0);
           line.fromY = MAX_H;
           line.fromX = (int)((MAX_W - b) / slope);
 
@@ -815,21 +815,23 @@ class CutTheRoots {
         }
       }
 
+      /*
       assert(0 <= line.fromX && line.fromX <= MAX_W);
       assert(0 <= line.fromY && line.fromY <= MAX_H);
       assert(0 <= line.toX && line.toX <= MAX_W);
       assert(0 <= line.toY && line.toY <= MAX_H);
+      */
 
       return line;
     }
 
-    int calcDist(int y1, int x1, int y2, int x2) {
+    inline int calcDist(int y1, int x1, int y2, int x2) {
       int dy = y1 - y2;
       int dx = x1 - x2;
       return dy*dy + dx*dx;
     }
 
-    int calcDistDetail(int y1, int x1, int y2, int x2) {
+    inline int calcDistDetail(int y1, int x1, int y2, int x2) {
       int dy = y1 - y2;
       int dx = x1 - x2;
       return (int)sqrt(dy*dy + dx*dx);
