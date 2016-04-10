@@ -392,6 +392,21 @@ Polygon andrewScan(Polygon s) {
   return l;
 }
 
+int contains(Polygon g, Vector v) {
+  int n = g.size();
+  bool x = false;
+
+  for (int i = 0; i < n; i++) {
+    Vector a = g[i] - v;
+    Vector b = g[(i+1)%n] - v;
+
+    if(abs(cross(a, b)) < EPS && dot(a, b) < EPS) return 1;
+    if(a.y > b.y) swap(a, b);
+    if(a.y < EPS && EPS < b.y && cross(a, b) > EPS) x = !x;
+  }
+  return (x ? 2 : 0);
+}
+
 int randomNum[MAX_H+10];
 
 struct Line {
