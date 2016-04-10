@@ -392,6 +392,11 @@ Polygon andrewScan(Polygon s) {
   return l;
 }
 
+/**
+ * IN 2
+ * ON 1
+ * OUT 0
+ */
 int contains(Polygon g, Vector v) {
   int n = g.size();
   bool x = false;
