@@ -497,11 +497,12 @@ class CutTheRoots {
       int crossLimit = 3;
 
       for(int i = 0; i < NP-1; i++) {
-        Vector v1 = vertexList[i];
+        Vector *v1 = getVertex(i);
 
         for(int j = i+1; j < NP; j++) {
-          Vector v2 = vertexList[j];
-          Edge newEdge(v1.y, v1.x, v2.y, v2.x);
+          Vector *v2 = getVertex(j);
+          Edge newEdge(v1->y, v1->x, v2->y, v2->x);
+
           Vector p1(newEdge.fromY, newEdge.fromX);
           Vector p2(newEdge.toY, newEdge.toX);
 
@@ -584,25 +585,6 @@ class CutTheRoots {
       }
 
       for(int i = 0; i < limit; i++) {
-        /*
-        int idA = xor128() % g_edgeListSize;
-        int idB = xor128() % g_edgeListSize;
-
-        while(idA == idB) {
-          idA = xor128() % g_edgeListSize;
-          idB = xor128() % g_edgeListSize;
-        }
-
-        Edge *edgeA = getEdge(idA);
-        Edge *edgeB = getEdge(idB);
-
-        int cyA = (edgeA->fromY + edgeA->toY) / 2 + xor128()%300 - 150;
-        int cxA = (edgeA->fromX + edgeA->toX) / 2 + xor128()%300 - 150;
-
-        int cyB = (edgeB->fromY + edgeB->toY) / 2 + xor128()%300 - 150;
-        int cxB = (edgeB->fromX + edgeB->toX) / 2 + xor128()%300 - 150;
-        */
-
         int cyA = xor128()%MAX_H;
         int cxA = xor128()%MAX_W;
 
@@ -734,17 +716,15 @@ class CutTheRoots {
 
     int searchRoot(int rootId) {
       Vector *v = getVertex(rootId);
-      int nsize = v->neighbor.size();
       int value = 0;
 
-      for(int i = 0; i < nsize; i++) {
-        int rid = v->neighbor[i];
+      for(int rid : v->neighbor) {
         Root *root = getRoot(rid);
 
         value += searchRoot(root->to);
       }
 
-      value += v->dist;
+      value += v->dist + 5;
       v->value = value;
 
       return value;
@@ -752,13 +732,12 @@ class CutTheRoots {
 
     void cleanRoot(int rootId) {
       Vector *v = getVertex(rootId);
-      int nsize = v->neighbor.size();
 
-      for(int i = 0; i < nsize; i++) {
-        int rid = v->neighbor[i];
+      for(int rid : v->neighbor) {
 
         if (g_aliveRootSize <= rid) continue;
         Root *r = getRoot(rid);
+
         if (r->aid < 0) continue;
         Root *root = getAliveRoot(r->aid);
         root->removed++;
@@ -795,10 +774,10 @@ class CutTheRoots {
       int dx = toX - fromX;
 
       if (dx == 0) {
-        line.fromX = fromX;
         line.fromY = 0;
-        line.toX = toX;
+        line.fromX = fromX;
         line.toY = MAX_H;
+        line.toX = toX;
       } else if (dy == 0) {
         line.fromY = fromY;
         line.fromX = 0;
