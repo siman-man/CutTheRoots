@@ -494,7 +494,7 @@ class CutTheRoots {
       }
 
       int esize = edgeList.size();
-      int crossLimit = 2;
+      int crossLimit = 3;
 
       for(int i = 0; i < NP-1; i++) {
         Vector v1 = vertexList[i];
