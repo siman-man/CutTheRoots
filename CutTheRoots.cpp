@@ -23,6 +23,7 @@ typedef long long ll;
 const int MAX_NP = 105;
 const int MAX_W = 1024;
 const int MAX_H = 1024;
+const int MAX_PS = 105000;
 
 const int COUNTER_CLOCKWISE =     1;
 const int CLOCKWISE         =    -1;
@@ -38,19 +39,60 @@ unsigned long long xor128(){
   return (rw=(rw^(rw>>19))^(rt^(rt>>8)));
 }
 
+class UnionFind {
+  int parent[MAX_PS];
+  int rank[MAX_PS];
+
+  public:
+
+  void init(int n){
+    for(int i = 0; i < n; i++){
+      parent[i] = i;
+      rank[i] = 0;
+    }
+  }
+
+  int find(int x){
+    if (parent[x] == x) {
+      return x;
+    } else {
+      return parent[x] = find(parent[x]);
+    }
+  }
+
+  void unite(int x, int y){
+    x = find(x);
+    y = find(y);
+    if (x == y) return;
+
+    if (rank[x] < rank[y]) {
+      parent[x] = y;
+    } else {
+      parent[y] = x;
+      if (rank[x] == rank[y]) rank[x]++;
+    }
+  }
+
+  bool same(int y, int x) {
+    return find(x) == find(y);
+  }
+};
+
 class Vector {
   public:
+    double x, y;
     int id;
     int value;
     int dist;
     int depth;
-    double x, y;
-    vector<int> roots;
+    int branchCount;
+    set<int> roots;
 
     Vector(double y = 0.0, double x = 0.0) {
       this->value = 0;
       this->dist = 0;
       this->depth = 0;
+      this->branchCount = 0;
       this->y = y;
       this->x = x;
     }
@@ -155,6 +197,8 @@ class Triangle{
 
 Vector vectorList[MAX_NP];
 vector<Vector> vertexList;
+
+typedef vector<Vector> Polygon;
 
 class Delaunay2d{
   public:
@@ -313,6 +357,41 @@ inline bool intersect(Vector &p1, Vector &p2, Vector &p3, Vector &p4){
   return ((ccw(p1, p2, p3) * ccw(p1, p2, p4) <= 0) && (ccw(p3, p4, p1) * ccw(p3, p4, p2) < 0));
 }
 
+Polygon andrewScan(Polygon s) {
+  Polygon u, l;
+
+  if(s.size() < 3) return s;
+  sort(s.begin(), s.end());
+
+  u.push_back(s[0]);
+  u.push_back(s[1]);
+
+  l.push_back(s[s.size() - 1]);
+  l.push_back(s[s.size() - 2]);
+
+  for (int i = 2; i < s.size(); i++) {
+    for (int n = u.size(); n >= 2 && ccw(u[n-2], u[n-1], s[i]) != CLOCKWISE; n--) {
+      u.pop_back();
+    }
+    u.push_back(s[i]);
+  }
+
+  for (int i = s.size() -3; i >= 0; i--) {
+    for (int n = l.size(); n >= 2 && ccw(l[n-2], l[n-1], s[i]) != CLOCKWISE; n--) {
+      l.pop_back();
+    }
+    l.push_back(s[i]);
+  }
+
+  reverse(l.begin(), l.end());
+
+  for (int i = u.size() - 2; i >= 1; i--) {
+    l.push_back(u[i]);
+  }
+
+  return l;
+}
+
 int randomNum[MAX_H+10];
 
 struct Line {
@@ -374,9 +453,10 @@ int g_PS;
 vector<Edge> edgeList;
 vector<Root> activeRootList;
 Root rootList[105000];
-int rootListSize;
+int g_rootListSize;
 int g_activeRootSize;
 int g_edgeListSize;
+UnionFind uf;
 
 class CutTheRoots {
   public:
@@ -386,13 +466,13 @@ class CutTheRoots {
       fprintf(stderr, "roots = %ld\n", roots.size());
 
       vector<int> ret;
-      init();
 
       g_NP = NP;
       g_PS = points.size()/2;
-      rootListSize = roots.size()/2;
       set<Vector> vertices;
       set<Triangle> triangles;
+
+      init();
 
       for (int i = 0; i < g_PS; ++i) {
         Vector v;
@@ -410,18 +490,20 @@ class CutTheRoots {
 
       int depthLimit = 2;
 
-      if (NP <= 50) {
-        depthLimit++;
-      }
-      if (NP <= 30) {
-        depthLimit++;
-      }
-      if (NP <= 15) {
-        depthLimit++;
-      }
-      if (NP <= 10) {
-        depthLimit++;
-      }
+      /*
+         if (NP <= 50) {
+         depthLimit++;
+         }
+         if (NP <= 30) {
+         depthLimit++;
+         }
+         if (NP <= 15) {
+         depthLimit += 2;
+         }
+         if (NP <= 10) {
+         depthLimit += 2;
+         }
+         */
 
       for (int i = NP; i < g_PS; i++) {
         int j = roots[2*(i-NP)];
@@ -439,13 +521,18 @@ class CutTheRoots {
         root.id = i;
         int dist = calcDistDetail(fromY, fromX, toY, toX);
 
-        from->roots.push_back(root.id);
+        from->roots.insert(root.id);
 
         to->dist = dist;
         to->depth = from->depth + 1;
 
+        if (from->depth > 5) {
+          uf.unite(j, k);
+        }
+
         root.depth = to->depth;
         rootList[i] = root;
+        g_rootListSize++;
 
         if (to->depth <= depthLimit && dist > 2) {
           rootList[i].aid = g_activeRootSize;
@@ -456,6 +543,52 @@ class CutTheRoots {
 
       for(int i = 0; i < NP; i++) {
         searchRoot(i);
+      }
+
+      map<int, bool> checkListV;
+      map<int, Polygon> polygons;
+
+      for(int i = NP; i < g_PS; i++) {
+        int id = uf.find(i);
+
+        Vector v = vertexList[i];
+
+        polygons[id].push_back(v);
+      }
+
+      map<int, Polygon>::iterator pit = polygons.begin();
+      int addCnt = 0;
+      vector<Edge> edges;
+
+      while (pit != polygons.end()) {
+        int id = (*pit).first;
+        Polygon pol = (*pit).second;
+        Polygon totsu = andrewScan(pol);
+        vector<Root> eds = polygon2roots(totsu);
+        int ees = eds.size();
+        Vector *v = getVertex(id);
+
+        if (ees >= 3 && v->value >= 500) {
+          addCnt += ees;
+          for(int i = 0; i < ees; i++) {
+            Root rt = eds[i];
+
+            rt.aid = g_activeRootSize;
+
+            Vector *v1 = getVertex(rt.from);
+            Vector *v2 = getVertex(rt.to);
+            rt.value = max(v1->value, v2->value);
+
+            rootList[g_rootListSize] = rt;
+            g_rootListSize++;
+            g_activeRootSize++;
+            activeRootList.push_back(rt);
+          }
+
+          fprintf(stderr,"id: %d, value = %d, size = %d, add = %d\n", id, v->value, ees, addCnt);
+        }
+
+        pit++;
       }
 
       for(int i = NP; i < g_PS; i++) {
@@ -507,7 +640,7 @@ class CutTheRoots {
       }
 
       int esize = edgeList.size();
-      int crossLimit = 3;
+      int crossLimit = 5;
 
       for(int i = 0; i < NP-1; i++) {
         Vector *v1 = getVertex(i);
@@ -541,7 +674,6 @@ class CutTheRoots {
 
       int rsize = g_activeRootSize;
       fprintf(stderr, "edge size = %d, root size = %d\n", g_edgeListSize, rsize);
-      vector<Edge> edges;
 
       for(int i = 0; i < NP; i++) {
         Edge edge = getBestEdge();
@@ -739,7 +871,7 @@ class CutTheRoots {
         value += searchRoot(root->to);
       }
 
-      value += v->dist + 3;
+      value += v->dist + 5;
       v->value = value;
 
       return value;
@@ -763,10 +895,13 @@ class CutTheRoots {
 
     void init() {
       g_activeRootSize = 0;
+      g_rootListSize = g_NP;
 
       for(int i = 0; i < MAX_H+10; i++) {
         randomNum[i] = xor128();
       }
+
+      uf.init(g_PS);
     }
 
     Line edge2line(Edge edge) {
@@ -810,13 +945,36 @@ class CutTheRoots {
       }
 
       /*
-      assert(0 <= line.fromX && line.fromX <= MAX_W);
-      assert(0 <= line.fromY && line.fromY <= MAX_H);
-      assert(0 <= line.toX && line.toX <= MAX_W);
-      assert(0 <= line.toY && line.toY <= MAX_H);
-      */
+         assert(0 <= line.fromX && line.fromX <= MAX_W);
+         assert(0 <= line.fromY && line.fromY <= MAX_H);
+         assert(0 <= line.toX && line.toX <= MAX_W);
+         assert(0 <= line.toY && line.toY <= MAX_H);
+         */
 
       return line;
+    }
+
+    vector<Root> polygon2roots(Polygon &pol) {
+      vector<Root> roots;
+      int psize = pol.size();
+
+      for(int i = 0; i < psize; i++) {
+        Vector v1 = pol[i%psize];
+        Vector v2 = pol[(i+1)%psize];
+        Root root;
+
+        if (v1.depth <= v2.depth) {
+          root.from = v1.id;
+          root.to = v2.id;
+        } else {
+          root.from = v2.id;
+          root.to = v1.id;
+        }
+
+        roots.push_back(root);
+      }
+
+      return roots;
     }
 
     inline int calcDist(int y1, int x1, int y2, int x2) {
