@@ -635,13 +635,15 @@ class CutTheRoots {
             //rt.aid = g_activeRootSize;
 
             /*
-               rt.value = min(v1->value, v2->value) / v1->depth;
+            Vector *v1 = getVertex(rt.from);
+            Vector *v2 = getVertex(rt.to);
+            rt.value = min(v1->value, v2->value);
 
-               rootList[g_rootListSize] = rt;
-               g_rootListSize++;
-               g_activeRootSize++;
-               activeRootList.push_back(rt);
-               */
+            rootList[g_rootListSize] = rt;
+            g_rootListSize++;
+            g_activeRootSize++;
+            activeRootList.push_back(rt);
+            */
           }
         }
 
@@ -750,8 +752,6 @@ class CutTheRoots {
         }
 
         edge2line(edge);
-
-        //fprintf(stderr,"fromY = %d, fromX = %d, toY = %d, toX = %d\n", line.fromY, line.fromX, line.toY, line.toX);
 
         removeRoot(g_line);
         removeEdge(g_line);
