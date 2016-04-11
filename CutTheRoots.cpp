@@ -472,6 +472,7 @@ int g_NP;
 int g_PS;
 vector<Edge> edgeList;
 vector<Root> activeRootList;
+vector<int> convexHullVertex;
 Root rootList[105000];
 int g_rootListSize;
 int g_activeRootSize;
@@ -508,7 +509,7 @@ class CutTheRoots {
         }
       }
 
-      int depthLimit = 1;
+      int depthLimit = 3;
 
       /*
          if (NP <= 50) {
@@ -546,15 +547,14 @@ class CutTheRoots {
         to->dist = dist;
         to->depth = from->depth + 1;
 
-        if (from->depth > 0) {
+        if (to->depth > 1) {
           uf.unite(j, k);
         }
 
         root.depth = to->depth;
-        rootList[i] = root;
-        g_rootListSize++;
+        rootList[g_rootListSize++] = root;
 
-        if (to->depth <= depthLimit && dist > 2) {
+        if (to->depth <= depthLimit && dist > 3) {
           rootList[i].aid = g_activeRootSize;
           g_activeRootSize++;
           activeRootList.push_back(root);
@@ -579,6 +579,7 @@ class CutTheRoots {
       map<int, Polygon>::iterator pit = polygons.begin();
       int addCnt = 0;
       vector<Edge> edges;
+      map<int, bool> vcheck;
 
       while (pit != polygons.end()) {
         int id = (*pit).first;
@@ -586,23 +587,31 @@ class CutTheRoots {
         Polygon totsu = andrewScan(pol);
         vector<Root> eds = polygon2roots(totsu);
         int ees = eds.size();
-        Vector *v = getVertex(id);
 
+        addCnt += ees;
         if (ees >= 3) {
-          addCnt += ees;
           for(int i = 0; i < ees; i++) {
             Root rt = eds[i];
 
+            if (!vcheck[rt.from]) {
+              convexHullVertex.push_back(rt.from);
+              vcheck[rt.from] = true;
+            }
+            if (!vcheck[rt.to]) {
+              convexHullVertex.push_back(rt.to);
+              vcheck[rt.to] = true;
+            }
+
             //rt.aid = g_activeRootSize;
 
-            Vector *v1 = getVertex(rt.from);
-            Vector *v2 = getVertex(rt.to);
-            rt.value = max(v1->value, v2->value);
+            /*
+            rt.value = min(v1->value, v2->value) / v1->depth;
 
             rootList[g_rootListSize] = rt;
             g_rootListSize++;
             g_activeRootSize++;
             activeRootList.push_back(rt);
+            */
           }
         }
 
@@ -729,31 +738,48 @@ class CutTheRoots {
       int maxValue = INT_MIN;
       int limit = 200;
 
-      if (g_NP <= 75) {
+      if (g_NP >= 75) {
         limit = 200;
-      }
-      if (g_NP <= 60) {
+      } else if (g_NP >= 60) {
         limit = 300;
-      }
-      if (g_NP <= 40) {
+      } else if (g_NP >= 40) {
         limit = 500;
-      }
-      if (g_NP <= 30) {
-        limit = 600;
-      }
-      if (g_NP <= 25) {
+      } else if (g_NP >= 30) {
         limit = 800;
-      }
-      if (g_NP <= 20) {
+      } else if (g_NP >= 25) {
+        limit = 800;
+      } else {
         limit = 1500;
       }
 
-      for(int i = 0; i < limit; i++) {
-        int cyA = xor128()%MAX_H;
-        int cxA = xor128()%MAX_W;
+      int vsize = convexHullVertex.size();
 
-        int cyB = xor128()%MAX_H;
-        int cxB = xor128()%MAX_W;
+      for(int i = 0; i < limit; i++) {
+        int cyA, cxA, cyB, cxB;
+
+        if (xor128()%100 <= 15) {
+          cyA = xor128()%MAX_H;
+          cxA = xor128()%MAX_W;
+
+          cyB = xor128()%MAX_H;
+          cxB = xor128()%MAX_W;
+        } else {
+          int a = convexHullVertex[xor128()%vsize];
+          int b = convexHullVertex[xor128()%vsize];
+
+          while(a == b) {
+            a = convexHullVertex[xor128()%vsize];
+            b = convexHullVertex[xor128()%vsize];
+          }
+
+          Vector *v1 = getVertex(a);
+          Vector *v2 = getVertex(b);
+
+          cyA = v1->y;
+          cxA = v1->x;
+          cyB = v2->y;
+          cxB = v2->x;
+        }
 
         Edge edge(cyA, cxA, cyB, cxB);
         Line line = edge2line(edge);
@@ -761,7 +787,7 @@ class CutTheRoots {
         int removeValue = 0;
         removeValue = removeRoot(line, true);
         int removeCount = removeEdge(line, true);
-        int eval = g_NP * removeCount - removeValue;
+        int eval = 200 * removeCount - removeValue/2;
 
         if(removeCount > 0 && maxValue < eval) {
           maxValue = eval;
@@ -883,10 +909,14 @@ class CutTheRoots {
       Vector *v = getVertex(rootId);
       int value = 0;
 
-      for(int rid : v->roots) {
+      set<int>::iterator it = v->roots.begin();
+
+      while(it != v->roots.end()) {
+        int rid = (*it);
         Root *root = getRoot(rid);
 
         value += searchRoot(root->to);
+        it++;
       }
 
       value += v->dist + 5;
@@ -898,7 +928,11 @@ class CutTheRoots {
     void cleanRoot(int rootId) {
       Vector *v = getVertex(rootId);
 
-      for(int rid : v->roots) {
+      set<int>::iterator it = v->roots.begin();
+
+      while(it != v->roots.end()) {
+        int rid = (*it);
+        it++;
 
         if (g_activeRootSize <= rid) continue;
         Root *r = getRoot(rid);
