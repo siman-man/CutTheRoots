@@ -383,7 +383,7 @@ inline bool intersect(Vector &p1, Vector &p2, Vector &p3, Vector &p4){
   return ((ccw(p1, p2, p3) * ccw(p1, p2, p4) <= 0) && (ccw(p3, p4, p1) * ccw(p3, p4, p2) < 0));
 }
 
-inline bool intersect2(int a, int b, int c, int d, int e, int f, int g, int h) {
+inline bool intersect_fast(int a, int b, int c, int d, int e, int f, int g, int h) {
   return ((ccw2(a, b, c, d, e, f) * ccw2(a, b, c, d, g, h) <= 0) && (ccw2(e, f, g, h, a, b) * ccw2(e, f, g, h, c, d) < 0));
 }
 
@@ -728,7 +728,7 @@ class CutTheRoots {
             Vector p3(edge->fromY, edge->fromX);
             Vector p4(edge->toY, edge->toX);
 
-            if (intersect2(v1->y, v1->x, v2->y, v2->x, edge->fromY, edge->fromX, edge->toY, edge->toX)) {
+            if (intersect_fast(v1->y, v1->x, v2->y, v2->x, edge->fromY, edge->fromX, edge->toY, edge->toX)) {
               crossCount++;
             }
           }
@@ -872,7 +872,7 @@ class CutTheRoots {
           continue;
         }
 
-        if (intersect2(line.fromY, line.fromX, line.toY, line.toX, edge->fromY, edge->fromX, edge->toY, edge->toX)) {
+        if (intersect_fast(line.fromY, line.fromX, line.toY, line.toX, edge->fromY, edge->fromX, edge->toY, edge->toX)) {
           removeCount++;
 
           if (!evalMode) {
@@ -892,7 +892,7 @@ class CutTheRoots {
           continue;
         }
 
-        if (intersect2(line.fromY, line.fromX, line.toY, line.toX,
+        if (intersect_fast(line.fromY, line.fromX, line.toY, line.toX,
               edge->fromY, edge->fromX, edge->toY, edge->toX)) {
           if (edge->removed == 1 && evalMode) {
             return false;
@@ -924,7 +924,7 @@ class CutTheRoots {
         Vector *p3 = getVertex(root->from);
         Vector *p4 = getVertex(root->to);
 
-        if (intersect2(line.fromY, line.fromX, line.toY, line.toX, p3->y, p3->x, p4->y, p4->x)) {
+        if (intersect_fast(line.fromY, line.fromX, line.toY, line.toX, p3->y, p3->x, p4->y, p4->x)) {
           removeValue += root->value;
 
           if (!evalMode) {
