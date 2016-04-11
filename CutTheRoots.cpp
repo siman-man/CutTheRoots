@@ -502,6 +502,20 @@ struct Root {
   }
 };
 
+struct Node {
+  Edge edge;
+  int removeValue;
+
+  Node(Edge &edge, int value){ 
+    this->edge = edge;
+    this->removeValue = value;
+  }
+    
+  bool operator >(const Node &e) const{
+    return removeValue < e.removeValue;
+  }    
+};
+
 int g_NP;
 int g_PS;
 vector<Edge> edgeList;
@@ -513,6 +527,8 @@ int g_activeRootSize;
 int g_edgeListSize;
 Line g_line;
 UnionFind uf;
+
+priority_queue<Node, vector<Node>, greater<Node> > pque;
 
 class CutTheRoots {
   public:
@@ -612,7 +628,6 @@ class CutTheRoots {
       map<int, bool> vcheck;
 
       while (pit != polygons.end()) {
-        int id = (*pit).first;
         Polygon pol = (*pit).second;
         Polygon totsu = andrewScan(pol);
         vector<Root> eds = polygon2roots(totsu);
@@ -753,15 +768,16 @@ class CutTheRoots {
 
         edge2line(edge);
 
-        removeRoot(g_line);
+        int removeValue = removeRoot(g_line);
         removeEdge(g_line);
 
+        pque.push(Node(edge, removeValue));
         edges.push_back(edge);
       }
 
       edges = cleanEdges(edges);
 
-      for(int i = 0; i < edges.size(); i++) {
+      for (int i = 0; i < edges.size(); i++) {
         Edge edge = edges[i];
 
         ret.push_back(edge.fromX);
@@ -844,21 +860,23 @@ class CutTheRoots {
       vector<Edge> result;
       int esize = edges.size();
       int cleanCount = 0;
+      priority_queue<Node, vector<Node>, greater<Node> > pqueCopy;
 
-      for(int i = 0; i < esize; i++) {
-        Edge edge = edges[i];
+      while (!pque.empty()) {
+        Node node = pque.top(); pque.pop();
+        Edge edge = node.edge;
         edge2line(edge);
 
         if (cleanEdge(g_line, true)) {
           cleanEdge(g_line);
           cleanCount++;
         } else {
+          pqueCopy.push(node);
           result.push_back(edge);
         }
       }
 
-      //fprintf(stderr,"clean line count = %d\n", cleanCount);
-
+      pque = pqueCopy;
       return result;
     }
 
@@ -909,12 +927,8 @@ class CutTheRoots {
 
     int removeRoot(Line &line, bool evalMode = false) {
       int removeValue = 0;
-      Vector p1(line.fromY, line.fromX);
-      Vector p2(line.toY, line.toX);
 
-      int rsize = g_activeRootSize;
-
-      for(int i = 0; i < rsize; i++) {
+      for(int i = 0; i < g_activeRootSize; i++) {
         Root *root = getActiveRoot(i);
 
         if (root->removed > 0 && evalMode) {
@@ -1057,19 +1071,19 @@ class CutTheRoots {
       return (int)sqrt(dy*dy + dx*dx);
     }
 
-    Edge* getEdge(int id) {
+    inline Edge* getEdge(int id) {
       return &edgeList[id];
     }
 
-    Root* getRoot(int id) {
+    inline Root* getRoot(int id) {
       return &rootList[id];
     }
 
-    Root* getActiveRoot(int id) {
+    inline Root* getActiveRoot(int id) {
       return &activeRootList[id];
     }
 
-    Vector* getVertex(int id) {
+    inline Vector* getVertex(int id) {
       return &vertexList[id];
     }
 };
