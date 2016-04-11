@@ -508,7 +508,7 @@ class CutTheRoots {
         }
       }
 
-      int depthLimit = 2;
+      int depthLimit = 1;
 
       /*
          if (NP <= 50) {
@@ -546,7 +546,7 @@ class CutTheRoots {
         to->dist = dist;
         to->depth = from->depth + 1;
 
-        if (from->depth > 5) {
+        if (from->depth > 0) {
           uf.unite(j, k);
         }
 
@@ -588,12 +588,12 @@ class CutTheRoots {
         int ees = eds.size();
         Vector *v = getVertex(id);
 
-        if (ees >= 3 && v->value >= 500) {
+        if (ees >= 3) {
           addCnt += ees;
           for(int i = 0; i < ees; i++) {
             Root rt = eds[i];
 
-            rt.aid = g_activeRootSize;
+            //rt.aid = g_activeRootSize;
 
             Vector *v1 = getVertex(rt.from);
             Vector *v2 = getVertex(rt.to);
@@ -604,8 +604,6 @@ class CutTheRoots {
             g_activeRootSize++;
             activeRootList.push_back(rt);
           }
-
-          fprintf(stderr,"id: %d, value = %d, size = %d, add = %d\n", id, v->value, ees, addCnt);
         }
 
         pit++;
@@ -729,7 +727,7 @@ class CutTheRoots {
     Edge getBestEdge() {
       Edge bestEdge;
       int maxValue = INT_MIN;
-      int limit = 300;
+      int limit = 200;
 
       if (g_NP <= 75) {
         limit = 200;
@@ -741,7 +739,7 @@ class CutTheRoots {
         limit = 500;
       }
       if (g_NP <= 30) {
-        limit = 800;
+        limit = 600;
       }
       if (g_NP <= 25) {
         limit = 800;
@@ -763,7 +761,7 @@ class CutTheRoots {
         int removeValue = 0;
         removeValue = removeRoot(line, true);
         int removeCount = removeEdge(line, true);
-        int eval = 200 * removeCount - removeValue/10;
+        int eval = g_NP * removeCount - removeValue;
 
         if(removeCount > 0 && maxValue < eval) {
           maxValue = eval;
@@ -995,12 +993,6 @@ class CutTheRoots {
       }
 
       return roots;
-    }
-
-    inline int calcDist(int y1, int x1, int y2, int x2) {
-      int dy = y1 - y2;
-      int dx = x1 - x2;
-      return dy*dy + dx*dx;
     }
 
     inline int calcDistDetail(int y1, int x1, int y2, int x2) {
