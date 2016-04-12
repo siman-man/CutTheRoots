@@ -399,14 +399,14 @@ class CutTheRoots {
         }
       }
 
-      for(int i = 0; i < NP; i++) {
+      for (int i = 0; i < NP; i++) {
         searchRoot(i);
       }
 
       map<int, bool> checkListV;
       map<int, Polygon> polygons;
 
-      for(int i = NP; i < g_PS; i++) {
+      for (int i = NP; i < g_PS; i++) {
         int id = uf.find(i);
 
         Vector v = vertexList[i];
@@ -424,7 +424,7 @@ class CutTheRoots {
         int ees = eds.size();
 
         if (ees >= 3) {
-          for(int i = 0; i < ees; i++) {
+          for (int i = 0; i < ees; i++) {
             Root rt = eds[i];
 
             if (!vcheck[rt.from]) {
@@ -441,7 +441,7 @@ class CutTheRoots {
         pit++;
       }
 
-      for(int i = NP; i < g_PS; i++) {
+      for (int i = NP; i < g_PS; i++) {
         Root *root = getRoot(i);
         Vector *v1 = getVertex(root->from);
         Vector *v2 = getVertex(root->to);
@@ -454,10 +454,10 @@ class CutTheRoots {
         }
       }
 
-      for(int i = 0; i < NP-1; i++) {
+      for (int i = 0; i < NP-1; i++) {
         Vector *v1 = getVertex(i);
 
-        for(int j = i+1; j < NP; j++) {
+        for (int j = i+1; j < NP; j++) {
           Vector *v2 = getVertex(j);
           Edge newEdge(v1->y, v1->x, v2->y, v2->x);
           newEdge.from = i;
@@ -472,7 +472,7 @@ class CutTheRoots {
       int rsize = g_activeRootSize;
       fprintf(stderr, "edge size = %d, root size = %d\n", g_edgeListSize, rsize);
 
-      for(int i = 0; i < NP; i++) {
+      for (int i = 0; i < NP; i++) {
         Edge edge = getBestEdge();
 
         if (edge.fromY == -1) {
@@ -594,7 +594,7 @@ class CutTheRoots {
     int removeEdge(Line &line, bool evalMode = false) {
       int removeCount = 0;
 
-      for(int i = 0; i < g_edgeListSize; i++) {
+      for (int i = 0; i < g_edgeListSize; i++) {
         Edge *edge = getEdge(i);
 
         if (edge->removed > 0 && evalMode) {
