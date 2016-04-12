@@ -83,14 +83,14 @@ class Vector {
     double x, y;
     int id;
     int value;
-    int dist;
     int depth;
     int branchCount;
+    double dist;
     set<int> roots;
 
     Vector(double y = 0.0, double x = 0.0) {
       this->value = 0;
-      this->dist = 0;
+      this->dist = 0.0;
       this->depth = 0;
       this->branchCount = 0;
       this->y = y;
@@ -130,7 +130,7 @@ class Vector {
     }
 };
 
-int norm2(int y, int x) {
+inline int norm2(int y, int x) {
   return y*y + x*x;
 }
 
@@ -488,7 +488,8 @@ struct Root {
   int to;
   int depth;
   int value;
-  int aid;
+  bool active;
+  double length;
   int removed;
 
   Root(int from = -1, int to = -1) {
@@ -496,7 +497,8 @@ struct Root {
     this->to = to;
 
     this->depth = 0;
-    this->aid = -1;
+    this->active = false;
+    this->length = 0.0;
     this->value = 0;
     this->removed = 0;
   }
@@ -518,14 +520,14 @@ struct Node {
 
 int g_NP;
 int g_PS;
+double g_totalLength;
 vector<Edge> edgeList;
-vector<Root> activeRootList;
 vector<int> convexHullVertex;
 Root rootList[105000];
-int g_rootListSize;
-int g_activeRootSize;
+int update_at[105000];
 int g_edgeListSize;
 Line g_line;
+int g_time;
 UnionFind uf;
 
 priority_queue<Node, vector<Node>, greater<Node> > pque;
@@ -573,20 +575,22 @@ class CutTheRoots {
       }
 
       for (int i = NP; i < g_PS; i++) {
-        int j = roots[2*(i-NP)];
-        int fromX = points[2*j];
-        int fromY = points[2*j+1];
+        int f = roots[2*(i-NP)];
+        int fromX = points[2*f];
+        int fromY = points[2*f+1];
 
-        int k = roots[2*(i-NP)+1];
-        int toX = points[2*k];
-        int toY = points[2*k+1];
+        int t = roots[2*(i-NP)+1];
+        int toX = points[2*t];
+        int toY = points[2*t+1];
 
-        Vector *from = getVertex(j);
-        Vector *to = getVertex(k);
+        Vector *from = getVertex(f);
+        Vector *to = getVertex(t);
 
-        Root root(j, k);
+        Root root(f, t);
         root.id = i;
-        int dist = calcDistDetail(fromY, fromX, toY, toX);
+        double dist = calcDistDetail(fromY, fromX, toY, toX);
+        g_totalLength += dist;
+        root.length = dist;
 
         from->roots.insert(root.id);
 
@@ -594,18 +598,18 @@ class CutTheRoots {
         to->depth = from->depth + 1;
 
         if (to->depth > 1) {
-          uf.unite(j, k);
+          uf.unite(f, t);
+        }
+
+        if (to->depth <= depthLimit && dist > 2) {
+          root.active = true;
         }
 
         root.depth = to->depth;
-        rootList[g_rootListSize++] = root;
-
-        if (to->depth <= depthLimit && dist > 2) {
-          rootList[i].aid = g_activeRootSize;
-          g_activeRootSize++;
-          activeRootList.push_back(root);
-        }
+        rootList[i] = root;
       }
+
+      fprintf(stderr,"total length = %f\n", g_totalLength);
 
       for(int i = 0; i < NP; i++) {
         searchRoot(i);
@@ -623,7 +627,6 @@ class CutTheRoots {
       }
 
       map<int, Polygon>::iterator pit = polygons.begin();
-      int addCnt = 0;
       vector<Edge> edges;
       map<int, bool> vcheck;
 
@@ -633,7 +636,6 @@ class CutTheRoots {
         vector<Root> eds = polygon2roots(totsu);
         int ees = eds.size();
 
-        addCnt += ees;
         if (ees >= 3) {
           for(int i = 0; i < ees; i++) {
             Root rt = eds[i];
@@ -671,11 +673,6 @@ class CutTheRoots {
         Vector *v2 = getVertex(root->to);
 
         root->value = min(v1->value, v2->value);
-
-        if (root->aid != -1) {
-          Root *aroot = getActiveRoot(root->aid);
-          aroot->value = root->value;
-        }
       }
 
       Delaunay2d::getDelaunayTriangles(vertices, &triangles);
@@ -756,10 +753,10 @@ class CutTheRoots {
 
       g_edgeListSize = edgeList.size();
 
-      int rsize = g_activeRootSize;
-      fprintf(stderr, "edge size = %d, root size = %d\n", g_edgeListSize, rsize);
+      fprintf(stderr, "edge size = %d\n", g_edgeListSize);
 
       for(int i = 0; i < NP; i++) {
+        g_time++;
         Edge edge = getBestEdge();
 
         if (edge.fromY == -1) {
@@ -776,6 +773,9 @@ class CutTheRoots {
       }
 
       edges = cleanEdges(edges);
+
+      double score = calcScore();
+      fprintf(stderr,"My Score = %f\n", score);
 
       for (int i = 0; i < edges.size(); i++) {
         Edge edge = edges[i];
@@ -869,6 +869,7 @@ class CutTheRoots {
 
         if (cleanEdge(g_line, true)) {
           cleanEdge(g_line);
+          cleanLine(g_line);
           cleanCount++;
         } else {
           pqueCopy.push(node);
@@ -928,10 +929,10 @@ class CutTheRoots {
     int removeRoot(Line &line, bool evalMode = false) {
       int removeValue = 0;
 
-      for(int i = 0; i < g_activeRootSize; i++) {
-        Root *root = getActiveRoot(i);
+      for(int i = g_NP; i < g_PS; i++) {
+        Root *root = getRoot(i);
 
-        if (root->removed > 0 && evalMode) {
+        if ((!root->active || root->removed > 0) && evalMode) {
           continue;
         }
 
@@ -941,7 +942,8 @@ class CutTheRoots {
         if (intersect_fast(line.fromY, line.fromX, line.toY, line.toX, p3->y, p3->x, p4->y, p4->x)) {
           removeValue += root->value;
 
-          if (!evalMode) {
+          if (!evalMode && update_at[root->id] != g_time) {
+            update_at[root->id] = g_time;
             root->removed++;
             cleanRoot(root->to);
           }
@@ -971,6 +973,38 @@ class CutTheRoots {
       return value;
     }
 
+    double calcScore() {
+      double length = 0;
+
+      for(int i = 0; i < g_NP; i++) {
+        length += getScore(i);
+      }
+
+      fprintf(stderr,"%f/%f\n", length, g_totalLength);
+
+      return 1000000.0 * length / g_totalLength;
+    }
+
+    double getScore(int rootId) {
+      Vector *v = getVertex(rootId);
+      double score = 0.0;
+
+      set<int>::iterator it = v->roots.begin();
+
+      while(it != v->roots.end()) {
+        int rid = (*it);
+        Root *root = getRoot(rid);
+
+        if (root->removed <= 0) {
+          score += root->length;
+          score += getScore(root->to);
+        }
+        it++;
+      }
+
+      return score;
+    }
+
     void cleanRoot(int rootId) {
       Vector *v = getVertex(rootId);
 
@@ -980,20 +1014,64 @@ class CutTheRoots {
         int rid = (*it);
         it++;
 
-        if (g_activeRootSize <= rid) continue;
-        Root *r = getRoot(rid);
+        Root *root = getRoot(rid);
+        assert(update_at[root->id] != g_time);
+        assert(rootId == root->from);
 
-        if (r->aid < 0) continue;
-        Root *root = getActiveRoot(r->aid);
-        root->removed++;
+        if (update_at[root->id] != g_time) {
+          root->removed++;
+          update_at[root->id] = g_time;
+          cleanRoot(root->to);
+        }
+      }
+    }
 
-        cleanRoot(root->to);
+    bool cleanLine(Line &line) {
+      g_time++;
+
+      for(int i = g_NP; i < g_PS; i++) {
+        Root *root = getRoot(i);
+
+        Vector *v1 = getVertex(root->from);
+        Vector *v2 = getVertex(root->to);
+
+        if (intersect_fast(line.fromY, line.fromX, line.toY, line.toX,
+              v1->y, v1->x, v2->y, v2->x)) {
+
+          if (update_at[root->id] != g_time) {
+            update_at[root->id] = g_time;
+            root->removed--;
+            rebirthRoot(root->to);
+          }
+        }
+      }
+
+      return true;
+    }
+
+    void rebirthRoot(int rootId) {
+      Vector *v = getVertex(rootId);
+
+      set<int>::iterator it = v->roots.begin();
+
+      while(it != v->roots.end()) {
+        int rid = (*it);
+        it++;
+
+        Root *root = getRoot(rid);
+
+        if (update_at[root->id] != g_time) {
+          root->removed--;
+          update_at[root->id] = g_time;
+          assert(root->removed >= 0);
+          rebirthRoot(root->to);
+        }
       }
     }
 
     void init() {
-      g_activeRootSize = 0;
-      g_rootListSize = g_NP;
+      g_time = 0;
+      memset(update_at, 0, sizeof(update_at));
 
       for(int i = 0; i < MAX_H+10; i++) {
         randomNum[i] = xor128();
@@ -1065,10 +1143,10 @@ class CutTheRoots {
       return roots;
     }
 
-    inline int calcDistDetail(int y1, int x1, int y2, int x2) {
+    inline double calcDistDetail(int y1, int x1, int y2, int x2) {
       int dy = y1 - y2;
       int dx = x1 - x2;
-      return (int)sqrt(dy*dy + dx*dx);
+      return sqrt(dy*dy + dx*dx);
     }
 
     inline Edge* getEdge(int id) {
@@ -1077,10 +1155,6 @@ class CutTheRoots {
 
     inline Root* getRoot(int id) {
       return &rootList[id];
-    }
-
-    inline Root* getActiveRoot(int id) {
-      return &activeRootList[id];
     }
 
     inline Vector* getVertex(int id) {
