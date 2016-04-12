@@ -3,17 +3,14 @@
 #include <map>
 #include <algorithm>
 #include <limits.h>
-#include <time.h>
 #include <string>
 #include <cassert>
 #include <string.h>
-#include <sstream>
 #include <set>
 #include <cstdio>
 #include <cfloat>
 #include <cstdlib>
 #include <cmath>
-#include <stack>
 #include <queue>
 
 using namespace std;
@@ -134,208 +131,9 @@ int norm2(int y, int x) {
   return y*y + x*x;
 }
 
-struct Circle {
-  Vector center;
-  double radius;
-};
-
-struct Point {
-  Vector *p1;
-  Vector *p2;
-  Vector *p3;
-  double dist;
-
-  Point(Vector *p1, Vector *p2, Vector *p3, double dist){
-    this->p1 = p1;
-    this->p2 = p2;
-    this->p3 = p3;
-    this->dist = dist;
-  }
-
-  bool operator >(const Point &e) const{
-    return dist > e.dist;
-  }    
-};
-
-class Triangle{
-  public:
-    const Vector *p1, *p2, *p3;
-
-    bool operator==(const Triangle& t) const{
-      return (*p1 == *t.p1 && *p2 == *t.p2 && *p3 == *t.p3) ||
-        (*p1 == *t.p1 && *p2 == *t.p3 && *p3 == *t.p2) ||
-        (*p1 == *t.p2 && *p2 == *t.p3 && *p3 == *t.p1) ||
-        (*p1 == *t.p2 && *p2 == *t.p1 && *p3 == *t.p3) ||
-        (*p1 == *t.p3 && *p2 == *t.p1 && *p3 == *t.p2) ||
-        (*p1 == *t.p3 && *p2 == *t.p2 && *p3 == *t.p1);
-    }
-
-    bool operator<(const Triangle& t) const{
-      return !(*getMinVertex() == *t.getMinVertex())? 
-        *getMinVertex() < *t.getMinVertex() :
-        !(*getMidVertex() == *t.getMidVertex())?
-        *getMidVertex() < *t.getMidVertex() :
-        *getMaxVertex() < *t.getMaxVertex();
-    }
-
-    bool hasCommonPoints(const Triangle& t) const{
-      return *p1 == *t.p1 || *p1 == *t.p2 || *p1 == *t.p3 ||
-        *p2 == *t.p1 || *p2 == *t.p2 || *p2 == *t.p3 ||
-        *p3 == *t.p1 || *p3 == *t.p2 || *p3 == *t.p3;
-    }
-
-  private:
-    inline const Vector* getMinVertex() const{
-      return *p1 < *p2 && *p1 < *p3 ? p1 : (*p2 < *p3)? p2 : p3;
-    }
-
-    inline const Vector* getMidVertex() const{
-      return ((*p1 < *p2 && *p2 < *p3) || (*p3 < *p2 && *p2 < *p1))? p2 :
-        ((*p2 < *p3 && *p3 < *p1) || (*p1 < *p3 && *p3 < *p2))? p3 : p1;
-    }
-
-    inline const Vector* getMaxVertex() const{
-      return (*p2 < *p1 && *p3 < *p1)? p1 : (*p3 < *p2)? p2 : p3;
-    }
-};
-
-Vector vectorList[MAX_NP];
 vector<Vector> vertexList;
 
 typedef vector<Vector> Polygon;
-
-class Delaunay2d{
-  public:
-    typedef const set<Vector>               ConstVertexSet;
-    typedef ConstVertexSet::const_iterator  ConstVertexIter;
-
-    typedef set<Triangle>                   TriangleSet;
-    typedef set<Triangle>::iterator         TriangleIter;
-
-    typedef map<Triangle, bool>             TriangleMap;
-
-    static void getDelaunayTriangles(ConstVertexSet &pVertexSet, TriangleSet *triangleSet){
-      Triangle hugeTriangle;{
-        double maxX, maxY; maxX = maxY = DBL_MIN;
-        double minX, minY; minX = minY = DBL_MAX;
-
-        for(ConstVertexIter it = pVertexSet.begin(); it != pVertexSet.end(); it++){
-          double y = it->y;
-          double x = it->x;
-
-          maxX = max(maxX, x);
-          minX = min(minX, x);
-
-          maxY = max(maxY, y);
-          minY = min(minY, y);
-        }
-
-        double centerX = (maxX - minX) * 0.5;
-        double centerY = (maxY - minY) * 0.5;
-
-        double dx = maxX - centerX;
-        double dy = maxY - centerY;
-        double radius = sqrt(dx*dx + dy*dy) + 1.0;
-
-        Vector *p1 = &vectorList[MAX_NP-1];
-        p1->x = centerX - sqrt(3.0) * radius;
-        p1->y = centerY - radius;
-
-        Vector *p2 = &vectorList[MAX_NP-2];
-        p2->x = centerX + sqrt(3.0) * radius;
-        p2->y = centerY - radius;
-
-        Vector *p3 = &vectorList[MAX_NP-3];
-        p3->x = centerX;
-        p3->y = centerY + 2.0 * radius;
-
-        hugeTriangle.p1 = p1;
-        hugeTriangle.p2 = p2;
-        hugeTriangle.p3 = p3;
-      }
-
-      triangleSet->insert(hugeTriangle);
-
-      for(ConstVertexIter vIter = pVertexSet.begin(); vIter != pVertexSet.end(); vIter++){
-        const Vector *p = &*vIter;
-
-        TriangleMap rddcMap;
-
-        for(TriangleIter tIter = triangleSet->begin(); tIter != triangleSet->end();){
-          Triangle t = *tIter;
-
-          Circle c;{
-            double x1 = t.p1->x; double y1 = t.p1->y;
-            double x2 = t.p2->x; double y2 = t.p2->y;
-            double x3 = t.p3->x; double y3 = t.p3->y;
-
-            double m = 2.0 * ((x2-x1)*(y3-y1)-(y2-y1)*(x3-x1));
-            double x = ((y3-y1)*(x2*x2-x1*x1+y2*y2-y1*y1)
-                +(y1-y2)*(x3*x3-x1*x1+y3*y3-y1*y1))/m;
-            double y = ((x1-x3)*(x2*x2-x1*x1+y2*y2-y1*y1)
-                +(x2-x1)*(x3*x3-x1*x1+y3*y3-y1*y1))/m;
-
-            c.center.x = x;
-            c.center.y = y;
-
-            double dx = t.p1->x - x;
-            double dy = t.p1->y - y;
-            double radius = sqrt(dx*dx + dy*dy);
-
-            c.radius = radius;
-          }
-
-          double dx = c.center.x - p->x;
-          double dy = c.center.y - p->y;
-          double dist = sqrt(dx*dx + dy*dy);
-
-          if(dist < c.radius){
-            Triangle t1;
-            t1.p1 = p; t1.p2 = t.p1; t1.p3 = t.p2;
-            addElementToRedundanciesMap(&rddcMap, t1);
-
-            Triangle t2;
-            t2.p1 = p; t2.p2 = t.p2; t2.p3 = t.p3;
-            addElementToRedundanciesMap(&rddcMap, t2);
-
-            Triangle t3;
-            t3.p1 = p; t3.p2 = t.p3; t3.p3 = t.p1;
-            addElementToRedundanciesMap(&rddcMap, t3);
-
-            triangleSet->erase(tIter++);
-          }else{
-            tIter++;
-          }
-        }
-
-        for(TriangleMap::iterator iter = rddcMap.begin(); iter != rddcMap.end(); iter++){
-          if(iter->second){
-            triangleSet->insert(iter->first);
-          }
-        }
-      }
-
-      for(TriangleIter tIter = triangleSet->begin(); tIter != triangleSet->end();){
-        if(hugeTriangle.hasCommonPoints(*tIter)){
-          triangleSet->erase(tIter++);
-        } else {
-          tIter++;
-        }
-      }
-    };
-
-  private:
-    static inline void addElementToRedundanciesMap(TriangleMap *pRddcMap, Triangle &t) {
-      TriangleMap::iterator it = pRddcMap->find(t);
-
-      if (it != pRddcMap->end() && it->second) {
-        pRddcMap->erase(it);
-        pRddcMap->insert(TriangleMap::value_type(t, false));
-      } else {
-        pRddcMap->insert(TriangleMap::value_type(t, true));
-      }
-    }
-};
 
 inline int dot(Vector &a, Vector &b){
   return a.x * b.x + a.y * b.y;
@@ -373,8 +171,8 @@ inline int ccw2(int ay, int ax, int by, int bx, int cy, int cx) {
 
   if(cross2(y1, x1, y2, x2) > EPS) return COUNTER_CLOCKWISE;
   if(cross2(y1, x1, y2, x2) < -EPS) return CLOCKWISE;
-  if(dot2(y1, x1, y2, x2) < -EPS) return ONLINE_BACK;
-  if(norm2(y1, x1) < norm2(y2, x2)) return ONLINE_FRONT;
+  //if(dot2(y1, x1, y2, x2) < -EPS) return ONLINE_BACK;
+  //if(norm2(y1, x1) < norm2(y2, x2)) return ONLINE_FRONT;
 
   return ON_SEGMENT;
 }
@@ -383,8 +181,8 @@ inline bool intersect(Vector &p1, Vector &p2, Vector &p3, Vector &p4){
   return ((ccw(p1, p2, p3) * ccw(p1, p2, p4) <= 0) && (ccw(p3, p4, p1) * ccw(p3, p4, p2) < 0));
 }
 
-inline bool intersect_fast(int a, int b, int c, int d, int e, int f, int g, int h) {
-  return ((ccw2(a, b, c, d, e, f) * ccw2(a, b, c, d, g, h) <= 0) && (ccw2(e, f, g, h, a, b) * ccw2(e, f, g, h, c, d) < 0));
+inline bool intersect_fast(int y1, int x1, int y2, int x2, int y3, int x3, int y4, int x4) {
+  return ((ccw2(y1, x1, y2, x2, y3, x3) * ccw2(y1, x1, y2, x2, y4, x4) <= 0) && (ccw2(y3, x3, y4, x4, y1, x1) * ccw2(y3, x3, y4, x4, y2, x2) < 0));
 }
 
 Polygon andrewScan(Polygon s) {
@@ -518,6 +316,7 @@ struct Node {
 
 int g_NP;
 int g_PS;
+int g_depthLimit;
 vector<Edge> edgeList;
 vector<Root> activeRootList;
 vector<int> convexHullVertex;
@@ -541,8 +340,6 @@ class CutTheRoots {
 
       g_NP = NP;
       g_PS = points.size()/2;
-      set<Vector> vertices;
-      set<Triangle> triangles;
 
       init();
 
@@ -552,24 +349,19 @@ class CutTheRoots {
         v.x = points[2*i];
         v.y = points[2*i+1];
 
-        //fprintf(stderr,"fromY = %d, fromX = %d\n", (int)v.y, (int)v.x);
         vertexList.push_back(v);
-
-        if(i < NP) {
-          vertices.insert(v);
-        }
       }
 
-      int depthLimit = 4;
+      g_depthLimit = 4;
 
       if (NP <= 50) {
-        depthLimit++;
+        g_depthLimit++;
       }
       if (NP <= 30) {
-        depthLimit++;
+        g_depthLimit++;
       }
       if (NP <= 15) {
-        depthLimit++;
+        g_depthLimit++;
       }
 
       for (int i = NP; i < g_PS; i++) {
@@ -600,7 +392,7 @@ class CutTheRoots {
         root.depth = to->depth;
         rootList[g_rootListSize++] = root;
 
-        if (to->depth <= depthLimit && dist > 2) {
+        if (to->depth <= g_depthLimit && dist > 3) {
           rootList[i].aid = g_activeRootSize;
           g_activeRootSize++;
           activeRootList.push_back(root);
@@ -623,8 +415,6 @@ class CutTheRoots {
       }
 
       map<int, Polygon>::iterator pit = polygons.begin();
-      int addCnt = 0;
-      vector<Edge> edges;
       map<int, bool> vcheck;
 
       while (pit != polygons.end()) {
@@ -633,7 +423,6 @@ class CutTheRoots {
         vector<Root> eds = polygon2roots(totsu);
         int ees = eds.size();
 
-        addCnt += ees;
         if (ees >= 3) {
           for(int i = 0; i < ees; i++) {
             Root rt = eds[i];
@@ -646,19 +435,6 @@ class CutTheRoots {
               convexHullVertex.push_back(rt.to);
               vcheck[rt.to] = true;
             }
-
-            //rt.aid = g_activeRootSize;
-
-            /*
-            Vector *v1 = getVertex(rt.from);
-            Vector *v2 = getVertex(rt.to);
-            rt.value = min(v1->value, v2->value);
-
-            rootList[g_rootListSize] = rt;
-            g_rootListSize++;
-            g_activeRootSize++;
-            activeRootList.push_back(rt);
-            */
           }
         }
 
@@ -678,52 +454,6 @@ class CutTheRoots {
         }
       }
 
-      Delaunay2d::getDelaunayTriangles(vertices, &triangles);
-
-      fprintf(stderr,"triangle num = %lu\n", triangles.size());
-
-      set<Triangle>::iterator it = triangles.begin();
-
-      map<ll, bool> checkList;
-
-      while(it != triangles.end()){
-        Triangle t = (*it);
-
-        const Vector *v1 = t.p1;
-        const Vector *v2 = t.p2;
-        const Vector *v3 = t.p3;
-
-        Edge edge1((int)v1->y, (int)v1->x, (int)v2->y, (int)v2->x);
-        edge1.from = v1->id;
-        edge1.to = v2->id;
-
-        Edge edge2((int)v1->y, (int)v1->x, (int)v3->y, (int)v3->x);
-        edge2.from = v1->id;
-        edge2.to = v3->id;
-
-        Edge edge3((int)v2->y, (int)v2->x, (int)v3->y, (int)v3->x);
-        edge3.from = v2->id;
-        edge3.to = v3->id;
-
-        if (!checkList[edge1.hashCode]) {
-          edgeList.push_back(edge1);
-          checkList[edge1.hashCode] = true;
-        }
-        if (!checkList[edge2.hashCode]) {
-          edgeList.push_back(edge2);
-          checkList[edge2.hashCode] = true;
-        }
-        if (!checkList[edge3.hashCode]) {
-          edgeList.push_back(edge3);
-          checkList[edge3.hashCode] = true;
-        }
-
-        it++;
-      }
-
-      int esize = edgeList.size();
-      int crossLimit = 10;
-
       for(int i = 0; i < NP-1; i++) {
         Vector *v1 = getVertex(i);
 
@@ -733,24 +463,7 @@ class CutTheRoots {
           newEdge.from = i;
           newEdge.to = j;
 
-          Vector p1(newEdge.fromY, newEdge.fromX);
-          Vector p2(newEdge.toY, newEdge.toX);
-
-          int crossCount = 0;
-
-          for(int k = 0; k < esize && crossCount <= crossLimit; k++) {
-            Edge *edge = getEdge(k);
-            Vector p3(edge->fromY, edge->fromX);
-            Vector p4(edge->toY, edge->toX);
-
-            if (intersect_fast(v1->y, v1->x, v2->y, v2->x, edge->fromY, edge->fromX, edge->toY, edge->toX)) {
-              crossCount++;
-            }
-          }
-
-          if (crossCount <= crossLimit) {
-            edgeList.push_back(newEdge);
-          }
+          edgeList.push_back(newEdge);
         }
       }
 
@@ -772,10 +485,9 @@ class CutTheRoots {
         removeEdge(g_line);
 
         pque.push(Node(edge, removeValue));
-        edges.push_back(edge);
       }
 
-      edges = cleanEdges(edges);
+      vector<Edge> edges = cleanEdges();
 
       for (int i = 0; i < edges.size(); i++) {
         Edge edge = edges[i];
@@ -812,7 +524,7 @@ class CutTheRoots {
 
       int vsize = convexHullVertex.size();
 
-      for(int i = 0; i < limit; i++) {
+      for (int i = 0; i < limit; i++) {
         int cyA, cxA, cyB, cxB;
 
         if (xor128()%100 <= 10) {
@@ -843,9 +555,9 @@ class CutTheRoots {
         edge2line(edge);
 
         int removeValue = 0;
-        removeValue = removeRoot(g_line, true);
+        removeValue = removeRootEval(g_line);
         int removeCount = removeEdge(g_line, true);
-        int eval = 200 * removeCount - removeValue/2;
+        int eval = 200 * removeCount - removeValue;
 
         if(removeCount > 0 && maxValue < eval) {
           maxValue = eval;
@@ -856,9 +568,8 @@ class CutTheRoots {
       return bestEdge;
     }
 
-    vector<Edge> cleanEdges(vector<Edge> &edges) {
+    vector<Edge> cleanEdges() {
       vector<Edge> result;
-      int esize = edges.size();
       int cleanCount = 0;
       priority_queue<Node, vector<Node>, greater<Node> > pqueCopy;
 
@@ -925,15 +636,11 @@ class CutTheRoots {
       return true;
     }
 
-    int removeRoot(Line &line, bool evalMode = false) {
+    int removeRoot(Line &line) {
       int removeValue = 0;
 
       for(int i = 0; i < g_activeRootSize; i++) {
         Root *root = getActiveRoot(i);
-
-        if (root->removed > 0 && evalMode) {
-          continue;
-        }
 
         Vector *p3 = getVertex(root->from);
         Vector *p4 = getVertex(root->to);
@@ -941,10 +648,27 @@ class CutTheRoots {
         if (intersect_fast(line.fromY, line.fromX, line.toY, line.toX, p3->y, p3->x, p4->y, p4->x)) {
           removeValue += root->value;
 
-          if (!evalMode) {
-            root->removed++;
-            cleanRoot(root->to);
-          }
+          root->removed++;
+          cleanRoot(root->to);
+        }
+      }
+
+      return removeValue;
+    }
+
+    int removeRootEval(Line &line) {
+      int removeValue = 0;
+
+      for(int i = 0; i < g_activeRootSize; i++) {
+        Root *root = getActiveRoot(i);
+
+        if (root->removed > 0) continue;
+
+        Vector *p3 = getVertex(root->from);
+        Vector *p4 = getVertex(root->to);
+
+        if (intersect_fast(line.fromY, line.fromX, line.toY, line.toX, p3->y, p3->x, p4->y, p4->x)) {
+          removeValue += root->value;
         }
       }
 
@@ -986,6 +710,7 @@ class CutTheRoots {
         if (r->aid < 0) continue;
         Root *root = getActiveRoot(r->aid);
         root->removed++;
+        root->value = 0.0;
 
         cleanRoot(root->to);
       }
@@ -1002,7 +727,7 @@ class CutTheRoots {
       uf.init(g_PS);
     }
 
-    void edge2line(Edge edge) {
+    void edge2line(Edge &edge) {
       int fromY, fromX, toY, toX;
 
       if (edge.fromX > edge.toX) {
