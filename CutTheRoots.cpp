@@ -37,19 +37,19 @@ unsigned long long xor128(){
 }
 
 class UnionFind {
+  public:
+
   int parent[MAX_PS];
   int rank[MAX_PS];
 
-  public:
-
-  void init(int n){
-    for(int i = 0; i < n; i++){
+  void init(int n) {
+    for (int i = 0; i < n; i++) {
       parent[i] = i;
       rank[i] = 0;
     }
   }
 
-  int find(int x){
+  int find(int x) {
     if (parent[x] == x) {
       return x;
     } else {
@@ -57,7 +57,7 @@ class UnionFind {
     }
   }
 
-  void unite(int x, int y){
+  void unite(int x, int y) {
     x = find(x);
     y = find(y);
     if (x == y) return;
@@ -77,112 +77,62 @@ class UnionFind {
 
 class Vector {
   public:
-    double x, y;
     int id;
-    int value;
-    int dist;
+    int x, y;
+    double value;
+    double dist;
     int depth;
-    int branchCount;
     set<int> roots;
 
-    Vector(double y = 0.0, double x = 0.0) {
-      this->value = 0;
-      this->dist = 0;
+    Vector(int y = -1, int x = -1) {
+      this->value = 0.0;
+      this->dist = 0.0;
       this->depth = 0;
-      this->branchCount = 0;
       this->y = y;
       this->x = x;
-    }
-
-    bool operator==(const Vector& v) const {
-      return (x == v.x && y == v.y);
     }
 
     bool operator<(const Vector& v) const {
       return (x != v.x)? x < v.x : y < v.y;
     }
 
-    Vector operator+(Vector p) {
-      return Vector(y + p.y, x + p.x);
-    }
-
     Vector operator-(Vector p) {
       return Vector(y - p.y, x - p.x);
-    }
-
-    Vector operator*(double k) {
-      return Vector(k * y, k * x);
-    }
-
-    Vector operator/(double k) {
-      return Vector(y / k, x / k);
     }
 
     double norm() {
       return x*x + y*y;
     }
-
-    double abs() {
-      return sqrt(norm());
-    }
 };
 
-int norm2(int y, int x) {
-  return y*y + x*x;
-}
-
 vector<Vector> vertexList;
-
 typedef vector<Vector> Polygon;
 
 inline int dot(Vector &a, Vector &b){
   return a.x * b.x + a.y * b.y;
 }
 
-inline int dot2(int ay, int ax, int by, int bx) {
-  return ax * bx + ay * by;
-}
-
 inline int cross(Vector &a, Vector &b){
   return a.x * b.y - a.y * b.x;
 }
 
-inline int cross2(int ay, int ax, int by, int bx) {
-  return ax * by - ay * bx;
-}
-
-inline int ccw(Vector &p0, Vector &p1, Vector &p2){
-  Vector a = p1 - p0;
-  Vector b = p2 - p0;
-
-  if(cross(a, b) > EPS) return COUNTER_CLOCKWISE;
-  if(cross(a, b) < -EPS) return CLOCKWISE;
-  if(dot(a, b) < -EPS) return ONLINE_BACK;
-  if(a.norm() < b.norm()) return ONLINE_FRONT;
-
-  return ON_SEGMENT;
-}
-
-inline int ccw2(int ay, int ax, int by, int bx, int cy, int cx) {
+inline int ccw(int ay, int ax, int by, int bx, int cy, int cx) {
   int y1 = by - ay;
   int x1 = bx - ax;
   int y2 = cy - ay;
   int x2 = cx - ax;
+  int val = x1*y2 - y1*x2;
 
-  if(cross2(y1, x1, y2, x2) > EPS) return COUNTER_CLOCKWISE;
-  if(cross2(y1, x1, y2, x2) < -EPS) return CLOCKWISE;
+  if(val > EPS) return COUNTER_CLOCKWISE;
+  if(val < -EPS) return CLOCKWISE;
   //if(dot2(y1, x1, y2, x2) < -EPS) return ONLINE_BACK;
   //if(norm2(y1, x1) < norm2(y2, x2)) return ONLINE_FRONT;
 
   return ON_SEGMENT;
 }
 
-inline bool intersect(Vector &p1, Vector &p2, Vector &p3, Vector &p4){
-  return ((ccw(p1, p2, p3) * ccw(p1, p2, p4) <= 0) && (ccw(p3, p4, p1) * ccw(p3, p4, p2) < 0));
-}
-
-inline bool intersect_fast(int y1, int x1, int y2, int x2, int y3, int x3, int y4, int x4) {
-  return ((ccw2(y1, x1, y2, x2, y3, x3) * ccw2(y1, x1, y2, x2, y4, x4) <= 0) && (ccw2(y3, x3, y4, x4, y1, x1) * ccw2(y3, x3, y4, x4, y2, x2) < 0));
+inline bool intersect(int y1, int x1, int y2, int x2, int y3, int x3, int y4, int x4) {
+  return ((ccw(y1, x1, y2, x2, y3, x3) * ccw(y1, x1, y2, x2, y4, x4) <= 0) && (ccw(y3, x3, y4, x4, y1, x1) * ccw(y3, x3, y4, x4, y2, x2) < 0));
 }
 
 Polygon andrewScan(Polygon s) {
@@ -198,14 +148,14 @@ Polygon andrewScan(Polygon s) {
   l.push_back(s[s.size() - 2]);
 
   for (int i = 2; i < s.size(); i++) {
-    for (int n = u.size(); n >= 2 && ccw(u[n-2], u[n-1], s[i]) != CLOCKWISE; n--) {
+    for (int n = u.size(); n >= 2 && ccw(u[n-2].y, u[n-2].x, u[n-1].y, u[n-1].x, s[i].y, s[i].x) != CLOCKWISE; n--) {
       u.pop_back();
     }
     u.push_back(s[i]);
   }
 
   for (int i = s.size() -3; i >= 0; i--) {
-    for (int n = l.size(); n >= 2 && ccw(l[n-2], l[n-1], s[i]) != CLOCKWISE; n--) {
+    for (int n = l.size(); n >= 2 && ccw(l[n-2].y, l[n-2].x, l[n-1].y, l[n-1].x, s[i].y, s[i].x) != CLOCKWISE; n--) {
       l.pop_back();
     }
     l.push_back(s[i]);
@@ -285,8 +235,8 @@ struct Root {
   int from;
   int to;
   int depth;
-  int value;
-  int aid;
+  double value;
+  double length;
   int removed;
 
   Root(int from = -1, int to = -1) {
@@ -294,37 +244,40 @@ struct Root {
     this->to = to;
 
     this->depth = 0;
-    this->aid = -1;
-    this->value = 0;
+    this->length = 0.0;
+    this->value = 0.0;
     this->removed = 0;
   }
 };
 
 struct Node {
   Edge edge;
-  int removeValue;
+  double removeValue;
 
-  Node(Edge &edge, int value){ 
+  Node(Edge &edge, double value){ 
     this->edge = edge;
     this->removeValue = value;
   }
     
-  bool operator >(const Node &e) const{
+  bool operator >(const Node &e) const {
     return removeValue < e.removeValue;
-  }    
+  }
 };
 
 int g_NP;
 int g_PS;
 int g_depthLimit;
-vector<Edge> edgeList;
-vector<Root> activeRootList;
-vector<int> convexHullVertex;
-Root rootList[105000];
+int g_tryLimit;
 int g_rootListSize;
 int g_activeRootSize;
 int g_edgeListSize;
+int g_vsize;
 Line g_line;
+
+vector<Edge> edgeList;
+vector<int> activeRootList;
+vector<int> convexHullVertex;
+Root rootList[105000];
 UnionFind uf;
 
 priority_queue<Node, vector<Node>, greater<Node> > pque;
@@ -338,10 +291,9 @@ class CutTheRoots {
 
       vector<int> ret;
 
-      g_NP = NP;
       g_PS = points.size()/2;
 
-      init();
+      init(NP);
 
       for (int i = 0; i < g_PS; ++i) {
         Vector v;
@@ -350,18 +302,6 @@ class CutTheRoots {
         v.y = points[2*i+1];
 
         vertexList.push_back(v);
-      }
-
-      g_depthLimit = 4;
-
-      if (NP <= 50) {
-        g_depthLimit++;
-      }
-      if (NP <= 30) {
-        g_depthLimit++;
-      }
-      if (NP <= 15) {
-        g_depthLimit++;
       }
 
       for (int i = NP; i < g_PS; i++) {
@@ -376,9 +316,11 @@ class CutTheRoots {
         Vector *from = getVertex(j);
         Vector *to = getVertex(k);
 
+        double dist = calcDistDetail(fromY, fromX, toY, toX);
+
         Root root(j, k);
         root.id = i;
-        int dist = calcDistDetail(fromY, fromX, toY, toX);
+        root.length = dist;
 
         from->roots.insert(root.id);
 
@@ -393,9 +335,8 @@ class CutTheRoots {
         rootList[g_rootListSize++] = root;
 
         if (to->depth <= g_depthLimit && dist > 3) {
-          rootList[i].aid = g_activeRootSize;
           g_activeRootSize++;
-          activeRootList.push_back(root);
+          activeRootList.push_back(root.id);
         }
       }
 
@@ -403,7 +344,6 @@ class CutTheRoots {
         searchRoot(i);
       }
 
-      map<int, bool> checkListV;
       map<int, Polygon> polygons;
 
       for (int i = NP; i < g_PS; i++) {
@@ -418,8 +358,8 @@ class CutTheRoots {
       map<int, bool> vcheck;
 
       while (pit != polygons.end()) {
-        Polygon pol = (*pit).second;
-        Polygon totsu = andrewScan(pol);
+        Polygon polygon = (*pit).second;
+        Polygon totsu = andrewScan(polygon);
         vector<Root> eds = polygon2roots(totsu);
         int ees = eds.size();
 
@@ -447,11 +387,6 @@ class CutTheRoots {
         Vector *v2 = getVertex(root->to);
 
         root->value = min(v1->value, v2->value);
-
-        if (root->aid != -1) {
-          Root *aroot = getActiveRoot(root->aid);
-          aroot->value = root->value;
-        }
       }
 
       for (int i = 0; i < NP-1; i++) {
@@ -468,6 +403,7 @@ class CutTheRoots {
       }
 
       g_edgeListSize = edgeList.size();
+      g_vsize = convexHullVertex.size();
 
       int rsize = g_activeRootSize;
       fprintf(stderr, "edge size = %d, root size = %d\n", g_edgeListSize, rsize);
@@ -479,9 +415,8 @@ class CutTheRoots {
           continue;
         }
 
-        edge2line(edge);
-
-        int removeValue = removeRoot(g_line);
+        updateLine(edge.fromY, edge.fromX, edge.toY, edge.toX);
+        double removeValue = removeRoot(g_line);
         removeEdge(g_line);
 
         pque.push(Node(edge, removeValue));
@@ -503,65 +438,50 @@ class CutTheRoots {
 
     Edge getBestEdge() {
       Edge bestEdge;
-      int maxValue = INT_MIN;
-      int limit = 100;
+      double maxValue = -DBL_MAX;
+      int y1, x1, y2, x2;
 
-      if (g_NP >= 90) {
-        limit = 400;
-      } else if (g_NP >= 75) {
-        limit = 600;
-      } else if (g_NP >= 60) {
-        limit = 800;
-      } else if (g_NP >= 40) {
-        limit = 1000;
-      } else if (g_NP >= 30) {
-        limit = 1200;
-      } else if (g_NP >= 25) {
-        limit = 1200;
-      } else {
-        limit = 1500;
-      }
-
-      int vsize = convexHullVertex.size();
-
-      for (int i = 0; i < limit; i++) {
-        int cyA, cxA, cyB, cxB;
+      for (int i = 0; i < g_tryLimit; i++) {
 
         if (xor128()%100 <= 10) {
-          cyA = xor128()%MAX_H;
-          cxA = xor128()%MAX_W;
+          y1 = xor128()%MAX_H;
+          x1 = xor128()%MAX_W;
 
-          cyB = xor128()%MAX_H;
-          cxB = xor128()%MAX_W;
+          y2 = xor128()%MAX_H;
+          x2 = xor128()%MAX_W;
         } else {
-          int a = convexHullVertex[xor128()%vsize];
-          int b = convexHullVertex[xor128()%vsize];
+          int a = convexHullVertex[xor128()%g_vsize];
+          int b = convexHullVertex[xor128()%g_vsize];
 
           while (a == b) {
-            a = convexHullVertex[xor128()%vsize];
-            b = convexHullVertex[xor128()%vsize];
+            a = convexHullVertex[xor128()%g_vsize];
+            b = convexHullVertex[xor128()%g_vsize];
           }
 
           Vector *v1 = getVertex(a);
           Vector *v2 = getVertex(b);
 
-          cyA = v1->y;
-          cxA = v1->x;
-          cyB = v2->y;
-          cxB = v2->x;
+          y1 = v1->y;
+          x1 = v1->x;
+          y2 = v2->y;
+          x2 = v2->x;
         }
 
-        Edge edge(cyA, cxA, cyB, cxB);
-        edge2line(edge);
-
-        int removeValue = 0;
-        removeValue = removeRootEval(g_line);
+        updateLine(y1, x1, y2, x2);
         int removeCount = removeEdge(g_line, true);
-        int eval = 200 * removeCount - removeValue;
 
-        if(removeCount > 0 && maxValue < eval) {
-          maxValue = eval;
-          bestEdge = edge;
+        if (removeCount > 0) {
+          double removeValue = 0.0;
+          removeValue = removeRootEval(g_line);
+          int eval = 200 * removeCount - removeValue;
+
+          if (maxValue < eval) {
+            maxValue = eval;
+            bestEdge.fromY = y1;
+            bestEdge.fromX = x1;
+            bestEdge.toY = y2;
+            bestEdge.toX = x2;
+          }
         }
       }
 
@@ -570,17 +490,18 @@ class CutTheRoots {
 
     vector<Edge> cleanEdges() {
       vector<Edge> result;
-      int cleanCount = 0;
       priority_queue<Node, vector<Node>, greater<Node> > pqueCopy;
+      int qsize = pque.size();
+
+      fprintf(stderr,"pque size = %d\n", qsize);
 
       while (!pque.empty()) {
         Node node = pque.top(); pque.pop();
         Edge edge = node.edge;
-        edge2line(edge);
+        updateLine(edge.fromY, edge.fromX, edge.toY, edge.toX);
 
         if (cleanEdge(g_line, true)) {
           cleanEdge(g_line);
-          cleanCount++;
         } else {
           pqueCopy.push(node);
           result.push_back(edge);
@@ -597,11 +518,9 @@ class CutTheRoots {
       for (int i = 0; i < g_edgeListSize; i++) {
         Edge *edge = getEdge(i);
 
-        if (edge->removed > 0 && evalMode) {
-          continue;
-        }
+        if (edge->removed > 0 && evalMode) continue;
 
-        if (intersect_fast(line.fromY, line.fromX, line.toY, line.toX, edge->fromY, edge->fromX, edge->toY, edge->toX)) {
+        if (intersect(line.fromY, line.fromX, line.toY, line.toX, edge->fromY, edge->fromX, edge->toY, edge->toX)) {
           removeCount++;
 
           if (!evalMode) {
@@ -617,12 +536,9 @@ class CutTheRoots {
       for(int i = 0; i < g_edgeListSize; i++) {
         Edge *edge = getEdge(i);
 
-        if (edge->removed >= 2 && evalMode) {
-          continue;
-        }
+        if (edge->removed >= 2 && evalMode) continue;
 
-        if (intersect_fast(line.fromY, line.fromX, line.toY, line.toX,
-              edge->fromY, edge->fromX, edge->toY, edge->toX)) {
+        if (intersect(line.fromY, line.fromX, line.toY, line.toX, edge->fromY, edge->fromX, edge->toY, edge->toX)) {
           if (edge->removed == 1 && evalMode) {
             return false;
           }
@@ -636,17 +552,18 @@ class CutTheRoots {
       return true;
     }
 
-    int removeRoot(Line &line) {
-      int removeValue = 0;
+    double removeRoot(Line &line) {
+      double removeValue = 0.0;
 
-      for(int i = 0; i < g_activeRootSize; i++) {
-        Root *root = getActiveRoot(i);
+      for (int i = 0; i < g_activeRootSize; i++) {
+        int rid = getActiveRoot(i);
+        Root *root = getRoot(rid);
 
         Vector *p3 = getVertex(root->from);
         Vector *p4 = getVertex(root->to);
 
-        if (intersect_fast(line.fromY, line.fromX, line.toY, line.toX, p3->y, p3->x, p4->y, p4->x)) {
-          removeValue += root->value;
+        if (intersect(line.fromY, line.fromX, line.toY, line.toX, p3->y, p3->x, p4->y, p4->x)) {
+          removeValue += root->value + root->length;
 
           root->removed++;
           cleanRoot(root->to);
@@ -656,28 +573,31 @@ class CutTheRoots {
       return removeValue;
     }
 
-    int removeRootEval(Line &line) {
-      int removeValue = 0;
+    double removeRootEval(Line &line) {
+      double removeValue = 0.0;
 
       for(int i = 0; i < g_activeRootSize; i++) {
-        Root *root = getActiveRoot(i);
+        int rid = getActiveRoot(i);
+        Root *root = getRoot(rid);
 
-        if (root->removed > 0) continue;
+        if (root->removed > 0) {
+          continue;
+        }
 
         Vector *p3 = getVertex(root->from);
         Vector *p4 = getVertex(root->to);
 
-        if (intersect_fast(line.fromY, line.fromX, line.toY, line.toX, p3->y, p3->x, p4->y, p4->x)) {
-          removeValue += root->value;
+        if (intersect(line.fromY, line.fromX, line.toY, line.toX, p3->y, p3->x, p4->y, p4->x)) {
+          removeValue += root->value + root->length;
         }
       }
 
       return removeValue;
     }
 
-    int searchRoot(int rootId) {
+    double searchRoot(int rootId) {
       Vector *v = getVertex(rootId);
-      int value = 0;
+      double value = 0.0;
 
       set<int>::iterator it = v->roots.begin();
 
@@ -700,23 +620,19 @@ class CutTheRoots {
 
       set<int>::iterator it = v->roots.begin();
 
-      while(it != v->roots.end()) {
+      while (it != v->roots.end()) {
         int rid = (*it);
         it++;
 
-        if (g_activeRootSize <= rid) continue;
-        Root *r = getRoot(rid);
-
-        if (r->aid < 0) continue;
-        Root *root = getActiveRoot(r->aid);
+        Root *root = getRoot(rid);
         root->removed++;
-        root->value = 0.0;
 
         cleanRoot(root->to);
       }
     }
 
-    void init() {
+    void init(int NP) {
+      g_NP = NP;
       g_activeRootSize = 0;
       g_rootListSize = g_NP;
 
@@ -725,21 +641,46 @@ class CutTheRoots {
       }
 
       uf.init(g_PS);
+
+      if (NP >= 50) {
+        g_depthLimit = 4;
+      } else if (NP >= 30) {
+        g_depthLimit = 5;
+      } else if (NP >= 15) {
+        g_depthLimit = 6;
+      } else {
+        g_depthLimit = 7;
+      }
+
+      if (g_NP >= 90) {
+        g_tryLimit = 400;
+      } else if (g_NP >= 75) {
+        g_tryLimit = 600;
+      } else if (g_NP >= 60) {
+        g_tryLimit = 800;
+      } else if (g_NP >= 40) {
+        g_tryLimit = 1000;
+      } else if (g_NP >= 30) {
+        g_tryLimit = 1400;
+      } else if (g_NP >= 25) {
+        g_tryLimit = 2000;
+      } else if (g_NP >= 20) {
+        g_tryLimit = 2500;
+      } else if (g_NP >= 15) {
+        g_tryLimit = 3000;
+      } else {
+        g_tryLimit = 10000;
+      }
     }
 
-    void edge2line(Edge &edge) {
-      int fromY, fromX, toY, toX;
-
-      if (edge.fromX > edge.toX) {
-        fromY = edge.toY;
-        fromX = edge.toX;
-        toY = edge.fromY;
-        toX = edge.fromX;
-      } else {
-        fromY = edge.fromY;
-        fromX = edge.fromX;
-        toY = edge.toY;
-        toX = edge.toX;
+    void updateLine(int fromY, int fromX, int toY, int toX) {
+      if (fromX > toX) {
+        int tmp = fromX;
+        fromX = toX;
+        toX = tmp;
+        tmp = fromY;
+        fromY = toY;
+        toY = tmp;
       }
 
       int dy = toY - fromY;
@@ -790,10 +731,10 @@ class CutTheRoots {
       return roots;
     }
 
-    inline int calcDistDetail(int y1, int x1, int y2, int x2) {
-      int dy = y1 - y2;
-      int dx = x1 - x2;
-      return (int)sqrt(dy*dy + dx*dx);
+    inline double calcDistDetail(int y1, int x1, int y2, int x2) {
+      int dy = y2 - y1;
+      int dx = x2 - x1;
+      return sqrt(dy*dy + dx*dx);
     }
 
     inline Edge* getEdge(int id) {
@@ -804,8 +745,8 @@ class CutTheRoots {
       return &rootList[id];
     }
 
-    inline Root* getActiveRoot(int id) {
-      return &activeRootList[id];
+    inline int getActiveRoot(int id) {
+      return activeRootList[id];
     }
 
     inline Vector* getVertex(int id) {
