@@ -422,6 +422,10 @@ class CutTheRoots {
         pque.push(Node(edge, removeValue));
       }
 
+      for (int i = 0; i < g_edgeListSize; i++) {
+        assert(edgeList[i].removed > 0);
+      }
+
       vector<Edge> edges = cleanEdges();
 
       for (int i = 0; i < edges.size(); i++) {
@@ -475,7 +479,7 @@ class CutTheRoots {
           removeValue = removeRootEval(g_line);
           int eval = 200 * removeCount - removeValue;
 
-          if (maxValue < eval) {
+          if (maxValue < eval && !lineOnThePlant()) {
             maxValue = eval;
             bestEdge.fromY = y1;
             bestEdge.fromX = x1;
@@ -486,6 +490,18 @@ class CutTheRoots {
       }
 
       return bestEdge;
+    }
+
+    bool lineOnThePlant() {
+      for (int i = 0; i < g_NP; i++ ) {
+        Vector *v = getVertex(i);
+
+        if(ccw(g_line.fromY, g_line.fromX, g_line.toY, g_line.toX, v->y, v->x) == ON_SEGMENT) {
+          return true;
+        }
+      }
+
+      return false;
     }
 
     vector<Edge> cleanEdges() {
