@@ -211,6 +211,7 @@ struct Edge {
   int fromX;
   int toY;
   int toX;
+  double length;
   int from;
   int to;
   int removed;
@@ -261,6 +262,20 @@ struct Node {
     
   bool operator >(const Node &e) const {
     return removeValue < e.removeValue;
+  }
+};
+
+struct Neighbor {
+  int id;
+  double dist;
+
+  Neighbor(int id, double dist) {
+    this->id = id;
+    this->dist = dist;
+  }
+
+  bool operator >(const Neighbor &e) const {
+    return dist > e.dist;
   }
 };
 
@@ -394,14 +409,39 @@ class CutTheRoots {
       for (int i = 0; i < NP-1; i++) {
         Vector *v1 = getVertex(i);
 
+        priority_queue<Neighbor, vector<Neighbor>, greater<Neighbor> > nque;
+
         for (int j = i+1; j < NP; j++) {
           Vector *v2 = getVertex(j);
+          double length = calcDistDetail(v1->y, v1->x, v2->y, v2->x);
+
+          if (length >= 1000) continue;
+
           Edge newEdge(v1->y, v1->x, v2->y, v2->x);
           newEdge.from = i;
           newEdge.to = j;
+          newEdge.length = length;
 
           edgeList.push_back(newEdge);
+          //nque.push(Neighbor(j, length));
         }
+
+        /*
+        int cnt = 0;
+        while (!nque.empty() && cnt < g_NP/2) {
+          Neighbor nei = nque.top(); nque.pop();
+          Vector *v2 = getVertex(nei.id);
+
+          Edge newEdge(v1->y, v1->x, v2->y, v2->x);
+          newEdge.from = i;
+          newEdge.to = nei.id;
+          newEdge.length = nei.dist;
+
+          edgeList.push_back(newEdge);
+
+          cnt++;
+        }
+        */
       }
 
       g_edgeListSize = edgeList.size();
@@ -562,7 +602,7 @@ class CutTheRoots {
         if (edge->removed > 0 && evalMode) continue;
 
         if (intersect(line.fromY, line.fromX, line.toY, line.toX, edge->fromY, edge->fromX, edge->toY, edge->toX)) {
-          removeCount++;
+          removeCount += 1001 - edge->length;
 
           if (!evalMode) {
             edge->removed++;
@@ -781,7 +821,7 @@ class CutTheRoots {
       } else if (g_NP >= 15) {
         g_tryLimit = 3000;
       } else {
-        g_tryLimit = 10000;
+        g_tryLimit = 12000;
       }
     }
 
