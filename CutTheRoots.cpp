@@ -658,7 +658,7 @@ class CutTheRoots {
         it++;
       }
 
-      value += 0.0 * v->dist + 5;
+      value += v->dist + 5;
       v->value = value;
 
       return value;
