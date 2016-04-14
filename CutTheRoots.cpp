@@ -242,7 +242,9 @@ struct Node {
 
 int g_NP;
 int g_PS;
+int g_RC;
 int g_depthLimit;
+int g_branchBonus;
 int g_tryLimit;
 int g_rootListSize;
 int g_activeRootSize;
@@ -255,7 +257,7 @@ Line g_line;
 vector<Edge> edgeList;
 vector<int> activeRootList;
 vector<int> g_convexHullVertex;
-Root rootList[105000];
+Root rootList[MAX_PS];
 UnionFind uf;
 
 priority_queue<Node, vector<Node>, greater<Node> > pque;
@@ -263,13 +265,13 @@ priority_queue<Node, vector<Node>, greater<Node> > pque;
 class CutTheRoots {
   public:
     vector<int> makeCuts(int NP, vector<int> points, vector<int> roots) {
-      fprintf(stderr, "NP = %d\n", NP);
-      fprintf(stderr, "points = %ld\n", points.size());
-      fprintf(stderr, "roots = %ld\n", roots.size());
-
       vector<int> ret;
-
       g_PS = points.size()/2;
+      g_RC = roots.size()/2;
+
+      fprintf(stderr, "NP = %d\n", NP);
+      fprintf(stderr, "points = %d\n", g_PS);
+      fprintf(stderr, "roots = %d\n", g_RC);
 
       init(NP);
 
@@ -364,6 +366,10 @@ class CutTheRoots {
         Root *root = getRoot(i);
         Vector *v1 = getVertex(root->from);
         Vector *v2 = getVertex(root->to);
+
+        double distA = calcDistDetail(512, 512, v1->y, v1->x);
+        double distB = calcDistDetail(512, 512, v2->y, v2->x);
+        double dist = min(distA, distB);
 
         root->value = min(v1->value, v2->value);
       }
@@ -613,7 +619,7 @@ class CutTheRoots {
         it++;
       }
 
-      value += v->dist + 5;
+      value += v->dist + g_branchBonus;
       v->value = value;
 
       return value;
@@ -650,7 +656,9 @@ class CutTheRoots {
 
       uf.init(g_PS);
 
-      if (NP >= 50) {
+      if (NP >= 75) {
+        g_depthLimit = 4;
+      } else if (NP >= 50) {
         g_depthLimit = 4;
       } else if (NP >= 30) {
         g_depthLimit = 5;
@@ -659,6 +667,8 @@ class CutTheRoots {
       } else {
         g_depthLimit = 7;
       }
+
+      g_branchBonus = 5;
 
       if (g_NP >= 90) {
         g_tryLimit = 600;
