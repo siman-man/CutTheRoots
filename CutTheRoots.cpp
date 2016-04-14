@@ -1,26 +1,21 @@
 #include <iostream>
 #include <vector>
-#include <unordered_map>
 #include <algorithm>
-#include <limits.h>
-#include <string>
-#include <cassert>
-#include <string.h>
+#include <unordered_map>
 #include <unordered_set>
-#include <cstdio>
+#include <string.h>
+#include <cassert>
 #include <cfloat>
-#include <cstdlib>
-#include <cmath>
 #include <queue>
 
 using namespace std;
 
 typedef long long ll;
 
-const int MAX_NP = 105;
+const int MAX_NP = 110;
 const int MAX_W = 1024;
 const int MAX_H = 1024;
-const int MAX_PS = 105000;
+const int MAX_PS = 105010;
 
 const int COUNTER_CLOCKWISE =     1;
 const int CLOCKWISE         =    -1;
@@ -409,11 +404,6 @@ class CutTheRoots {
 
       vector<Edge> edges = cleanEdges();
 
-      /*
-      double score = calcScore();
-      fprintf(stderr,"My Score = %f\n", score);
-      */
-
       for (int i = 0; i < edges.size(); i++) {
         Edge edge = edges[i];
 
@@ -544,41 +534,6 @@ class CutTheRoots {
       return removeCount;
     }
 
-    void reviveRoot(Line &line) {
-      g_time++;
-
-      for (int i = 0; i < g_activeRootSize; i++) {
-        int rid = getActiveRoot(i);
-        Root *root = getRoot(rid);
-
-        Vector *p3 = getVertex(root->from);
-        Vector *p4 = getVertex(root->to);
-
-        if (g_updated[root->id] != g_time && intersect(line.fromY, line.fromX, line.toY, line.toX, p3->y, p3->x, p4->y, p4->x)) {
-          g_updated[root->id] = g_time;
-          root->removed--;
-          rebirthRoot(root->to);
-        }
-      }
-    }
-
-    void rebirthRoot(int rootId) {
-      Vector *v = getVertex(rootId);
-
-      unordered_set<int>::iterator it = v->roots.begin();
-
-      while (it != v->roots.end()) {
-        int rid = (*it);
-        it++;
-
-        Root *root = getRoot(rid);
-        g_updated[root->id] = g_time;
-        root->removed--;
-
-        rebirthRoot(root->to);
-      }
-    }
-
     bool cleanEdge(Line &line, bool evalMode = false) {
       for(int i = 0; i < g_edgeListSize; i++) {
         Edge *edge = getEdge(i);
@@ -662,35 +617,6 @@ class CutTheRoots {
       v->value = value;
 
       return value;
-    }
-
-    double calcScore() {
-      double score = 0.0;
-
-      for (int i = 0; i < g_NP; i++) {
-        score += getScore(i);
-      }
-
-      return score;
-    }
-
-    double getScore(int rootId) {
-      double score = 0.0;
-      Vector *v = getVertex(rootId);
-
-      unordered_set<int>::iterator it = v->roots.begin();
-
-      while (it != v->roots.end()) {
-        int rid = (*it);
-        it++;
-        Root *root = getRoot(rid);
-
-        if (root->removed > 0) continue;
-        score += root->length;
-        score += getScore(root->to);
-      }
-
-      return score;
     }
 
     void cleanRoot(int rootId) {

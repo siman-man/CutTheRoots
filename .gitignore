@@ -5,3 +5,5 @@ CutTheRoots
 visualizer/.idea
 visualizer/out
 visualizer/visualizer.iml
+*.txt
+hoge
