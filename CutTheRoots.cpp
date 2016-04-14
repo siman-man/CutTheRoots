@@ -1,11 +1,13 @@
 #include <iostream>
 #include <vector>
+// TODO: check unordered_map
 #include <map>
 #include <algorithm>
 #include <limits.h>
 #include <string>
 #include <cassert>
 #include <string.h>
+// TODO: check unordered_set
 #include <set>
 #include <cstdio>
 #include <cfloat>
@@ -265,20 +267,6 @@ struct Node {
   }
 };
 
-struct Neighbor {
-  int id;
-  double dist;
-
-  Neighbor(int id, double dist) {
-    this->id = id;
-    this->dist = dist;
-  }
-
-  bool operator >(const Neighbor &e) const {
-    return dist > e.dist;
-  }
-};
-
 int g_NP;
 int g_PS;
 int g_depthLimit;
@@ -293,7 +281,7 @@ Line g_line;
 
 vector<Edge> edgeList;
 vector<int> activeRootList;
-vector<int> convexHullVertex;
+vector<int> g_convexHullVertex;
 Root rootList[105000];
 UnionFind uf;
 
@@ -312,7 +300,7 @@ class CutTheRoots {
 
       init(NP);
 
-      for (int i = 0; i < g_PS; ++i) {
+      for (int i = 0; i < g_PS; i++) {
         Vector v;
         v.id = i;
         v.x = points[2*i];
@@ -377,25 +365,26 @@ class CutTheRoots {
       while (pit != polygons.end()) {
         Polygon polygon = (*pit).second;
         Polygon totsu = andrewScan(polygon);
+        pit++;
+
+        if (totsu.size() <= 2) continue;
+
         vector<Root> eds = polygon2roots(totsu);
         int ees = eds.size();
 
-        if (ees >= 3) {
-          for (int i = 0; i < ees; i++) {
-            Root rt = eds[i];
+        for (int i = 0; i < ees; i++) {
+          Root rt = eds[i];
 
-            if (!vcheck[rt.from]) {
-              convexHullVertex.push_back(rt.from);
-              vcheck[rt.from] = true;
-            }
-            if (!vcheck[rt.to]) {
-              convexHullVertex.push_back(rt.to);
-              vcheck[rt.to] = true;
-            }
+          if (!vcheck[rt.from]) {
+            g_convexHullVertex.push_back(rt.from);
+            vcheck[rt.from] = true;
+          }
+
+          if (!vcheck[rt.to]) {
+            g_convexHullVertex.push_back(rt.to);
+            vcheck[rt.to] = true;
           }
         }
-
-        pit++;
       }
 
       for (int i = NP; i < g_PS; i++) {
@@ -409,8 +398,6 @@ class CutTheRoots {
       for (int i = 0; i < NP-1; i++) {
         Vector *v1 = getVertex(i);
 
-        priority_queue<Neighbor, vector<Neighbor>, greater<Neighbor> > nque;
-
         for (int j = i+1; j < NP; j++) {
           Vector *v2 = getVertex(j);
           double length = calcDistDetail(v1->y, v1->x, v2->y, v2->x);
@@ -423,34 +410,16 @@ class CutTheRoots {
           newEdge.length = length;
 
           edgeList.push_back(newEdge);
-          //nque.push(Neighbor(j, length));
         }
-
-        /*
-        int cnt = 0;
-        while (!nque.empty() && cnt < g_NP/2) {
-          Neighbor nei = nque.top(); nque.pop();
-          Vector *v2 = getVertex(nei.id);
-
-          Edge newEdge(v1->y, v1->x, v2->y, v2->x);
-          newEdge.from = i;
-          newEdge.to = nei.id;
-          newEdge.length = nei.dist;
-
-          edgeList.push_back(newEdge);
-
-          cnt++;
-        }
-        */
       }
 
       g_edgeListSize = edgeList.size();
-      g_vsize = convexHullVertex.size();
+      g_vsize = g_convexHullVertex.size();
 
       int rsize = g_activeRootSize;
       fprintf(stderr, "edge size = %d, root size = %d\n", g_edgeListSize, rsize);
 
-      for (int i = 0; !finishCheck(); i++) {
+      while (!finishCheck()) {
         /*
         if (!pque.empty() && i % 5 == 0) {
           for (int j = 0; j < 1; j++) {
@@ -508,22 +477,22 @@ class CutTheRoots {
       Edge bestEdge;
       double maxValue = -DBL_MAX;
       int y1, x1, y2, x2;
+      int checkpoint = 0.1 * g_tryLimit;
 
       for (int i = 0; i < g_tryLimit; i++) {
-
-        if (xor128()%100 <= 10) {
+        if (i <= checkpoint) {
           y1 = xor128()%MAX_H;
           x1 = xor128()%MAX_W;
 
           y2 = xor128()%MAX_H;
           x2 = xor128()%MAX_W;
         } else {
-          int a = convexHullVertex[xor128()%g_vsize];
-          int b = convexHullVertex[xor128()%g_vsize];
+          int a = g_convexHullVertex[xor128()%g_vsize];
+          int b = g_convexHullVertex[xor128()%g_vsize];
 
           while (a == b) {
-            a = convexHullVertex[xor128()%g_vsize];
-            b = convexHullVertex[xor128()%g_vsize];
+            a = g_convexHullVertex[xor128()%g_vsize];
+            b = g_convexHullVertex[xor128()%g_vsize];
           }
 
           Vector *v1 = getVertex(a);
@@ -538,13 +507,12 @@ class CutTheRoots {
         updateLine(y1, x1, y2, x2);
         int removeCount = removeEdge(g_line, true);
 
-        if (removeCount > 0) {
+        if (removeCount > 0 && !lineOnThePlant()) {
           double removeValue = 0.0;
           removeValue = removeRootEval(g_line);
           double eval = -1 * removeValue / (double) removeCount;
-          //double eval = 200 * removeCount - removeValue;
 
-          if (maxValue < eval && !lineOnThePlant()) {
+          if (maxValue < eval) {
             maxValue = eval;
             bestEdge.fromY = y1;
             bestEdge.fromX = x1;
@@ -558,7 +526,7 @@ class CutTheRoots {
     }
 
     bool lineOnThePlant() {
-      for (int i = 0; i < g_NP; i++ ) {
+      for (int i = 0; i < g_NP; i++) {
         Vector *v = getVertex(i);
 
         if(ccw(g_line.fromY, g_line.fromX, g_line.toY, g_line.toX, v->y, v->x) == ON_SEGMENT) {
@@ -602,7 +570,7 @@ class CutTheRoots {
         if (edge->removed > 0 && evalMode) continue;
 
         if (intersect(line.fromY, line.fromX, line.toY, line.toX, edge->fromY, edge->fromX, edge->toY, edge->toX)) {
-          removeCount += 1001 - edge->length;
+          removeCount += 101 - edge->length/10;
 
           if (!evalMode) {
             edge->removed++;
@@ -772,7 +740,6 @@ class CutTheRoots {
         it++;
 
         Root *root = getRoot(rid);
-        assert(g_updated[rid] != g_time);
         root->removed++;
         g_updated[root->id] = g_time;
 
@@ -805,34 +772,43 @@ class CutTheRoots {
       }
 
       if (g_NP >= 90) {
-        g_tryLimit = 400;
-      } else if (g_NP >= 75) {
         g_tryLimit = 600;
-      } else if (g_NP >= 60) {
+      } else if (g_NP >= 85) {
         g_tryLimit = 800;
-      } else if (g_NP >= 40) {
+      } else if (g_NP >= 75) {
         g_tryLimit = 1000;
-      } else if (g_NP >= 30) {
+      } else if (g_NP >= 70) {
+        g_tryLimit = 1100;
+      } else if (g_NP >= 60) {
+        g_tryLimit = 1200;
+      } else if (g_NP >= 50) {
         g_tryLimit = 1400;
-      } else if (g_NP >= 25) {
+      } else if (g_NP >= 40) {
         g_tryLimit = 2000;
-      } else if (g_NP >= 20) {
+      } else if (g_NP >= 30) {
+        g_tryLimit = 2300;
+      } else if (g_NP >= 25) {
         g_tryLimit = 2500;
+      } else if (g_NP >= 20) {
+        g_tryLimit = 3500;
       } else if (g_NP >= 15) {
-        g_tryLimit = 3000;
+        g_tryLimit = 4500;
       } else {
-        g_tryLimit = 12000;
+        g_tryLimit = 15000;
       }
+
+      g_tryLimit *= 1.2;
     }
 
     void updateLine(int fromY, int fromX, int toY, int toX) {
       if (fromX > toX) {
-        int tmp = fromX;
-        fromX = toX;
-        toX = tmp;
-        tmp = fromY;
-        fromY = toY;
-        toY = tmp;
+        fromX ^= toX;
+        toX ^= fromX;
+        fromX ^= toX;
+
+        fromY ^= toY;
+        toY ^= fromY;
+        fromY ^= toY;
       }
 
       int dy = toY - fromY;
@@ -849,14 +825,12 @@ class CutTheRoots {
         g_line.toY = toY;
         g_line.toX = MAX_W;
       } else {
-        int ox = fromX;
-        int oy = fromY;
-        int extendL = 1+max(ox/dx, oy/dy);
-        int extendR = 1+max((MAX_W-ox)/dx, (MAX_H-oy)/dy);
-        g_line.fromX = ox - dx*extendL;
-        g_line.fromY = oy - dy*extendL;
-        g_line.toX = ox + dx*extendR;
-        g_line.toY = oy + dy*extendR;
+        int extendL = 1+max(fromX/dx, fromY/dy);
+        int extendR = 1+max((MAX_W-fromX)/dx, (MAX_H-fromY)/dy);
+        g_line.fromX = fromX - dx*extendL;
+        g_line.fromY = fromY - dy*extendL;
+        g_line.toX = fromX + dx*extendR;
+        g_line.toY = fromY + dy*extendR;
       }
     }
 
