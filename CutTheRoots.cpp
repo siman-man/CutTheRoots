@@ -1,14 +1,12 @@
 #include <iostream>
 #include <vector>
-// TODO: check unordered_map
-#include <map>
+#include <unordered_map>
 #include <algorithm>
 #include <limits.h>
 #include <string>
 #include <cassert>
 #include <string.h>
-// TODO: check unordered_set
-#include <set>
+#include <unordered_set>
 #include <cstdio>
 #include <cfloat>
 #include <cstdlib>
@@ -84,7 +82,7 @@ class Vector {
     double value;
     double dist;
     int depth;
-    set<int> roots;
+    unordered_set<int> roots;
 
     Vector(int y = -1, int x = -1) {
       this->value = 0.0;
@@ -170,26 +168,6 @@ Polygon andrewScan(Polygon s) {
   }
 
   return l;
-}
-
-/**
- * IN 2
- * ON 1
- * OUT 0
- */
-int contains(Polygon g, Vector v) {
-  int n = g.size();
-  bool x = false;
-
-  for (int i = 0; i < n; i++) {
-    Vector a = g[i] - v;
-    Vector b = g[(i+1)%n] - v;
-
-    if(abs(cross(a, b)) < EPS && dot(a, b) < EPS) return 1;
-    if(a.y > b.y) swap(a, b);
-    if(a.y < EPS && EPS < b.y && cross(a, b) > EPS) x = !x;
-  }
-  return (x ? 2 : 0);
 }
 
 int randomNum[MAX_H+10];
@@ -349,7 +327,7 @@ class CutTheRoots {
         searchRoot(i);
       }
 
-      map<int, Polygon> polygons;
+      unordered_map<int, Polygon> polygons;
 
       for (int i = NP; i < g_PS; i++) {
         int id = uf.find(i);
@@ -359,8 +337,8 @@ class CutTheRoots {
         polygons[id].push_back(v);
       }
 
-      map<int, Polygon>::iterator pit = polygons.begin();
-      map<int, bool> vcheck;
+      unordered_map<int, Polygon>::iterator pit = polygons.begin();
+      unordered_map<int, bool> vcheck;
 
       while (pit != polygons.end()) {
         Polygon polygon = (*pit).second;
@@ -420,21 +398,6 @@ class CutTheRoots {
       fprintf(stderr, "edge size = %d, root size = %d\n", g_edgeListSize, rsize);
 
       while (!finishCheck()) {
-        /*
-        if (!pque.empty() && i % 5 == 0) {
-          for (int j = 0; j < 1; j++) {
-            Node node = pque.top(); pque.pop();
-            Edge edge = node.edge;
-            fprintf(stderr,"removeValue = %f\n", node.removeValue);
-            updateLine(edge.fromY, edge.fromX, edge.toY, edge.toX);
-
-            cleanEdge(g_line);
-            reviveRoot(g_line);
-          }
-          continue;
-        }
-        */
-
         Edge edge = getBestEdge();
 
         updateLine(edge.fromY, edge.fromX, edge.toY, edge.toX);
@@ -602,7 +565,7 @@ class CutTheRoots {
     void rebirthRoot(int rootId) {
       Vector *v = getVertex(rootId);
 
-      set<int>::iterator it = v->roots.begin();
+      unordered_set<int>::iterator it = v->roots.begin();
 
       while (it != v->roots.end()) {
         int rid = (*it);
@@ -685,7 +648,7 @@ class CutTheRoots {
       Vector *v = getVertex(rootId);
       double value = 0.0;
 
-      set<int>::iterator it = v->roots.begin();
+      unordered_set<int>::iterator it = v->roots.begin();
 
       while(it != v->roots.end()) {
         int rid = (*it);
@@ -695,7 +658,7 @@ class CutTheRoots {
         it++;
       }
 
-      value += v->dist + 5;
+      value += 0.0 * v->dist + 5;
       v->value = value;
 
       return value;
@@ -715,7 +678,7 @@ class CutTheRoots {
       double score = 0.0;
       Vector *v = getVertex(rootId);
 
-      set<int>::iterator it = v->roots.begin();
+      unordered_set<int>::iterator it = v->roots.begin();
 
       while (it != v->roots.end()) {
         int rid = (*it);
@@ -733,7 +696,7 @@ class CutTheRoots {
     void cleanRoot(int rootId) {
       Vector *v = getVertex(rootId);
 
-      set<int>::iterator it = v->roots.begin();
+      unordered_set<int>::iterator it = v->roots.begin();
 
       while (it != v->roots.end()) {
         int rid = (*it);
@@ -796,8 +759,6 @@ class CutTheRoots {
       } else {
         g_tryLimit = 15000;
       }
-
-      g_tryLimit *= 1.2;
     }
 
     void updateLine(int fromY, int fromX, int toY, int toX) {
