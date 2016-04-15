@@ -15,7 +15,7 @@ typedef long long ll;
 const int MAX_NP = 110;
 const int MAX_W = 1024;
 const int MAX_H = 1024;
-const int MAX_PS = 105010;
+const int MAX_PS = 105110;
 
 unsigned long long xor128() {
   static unsigned long long rx=123456789, ry=362436069, rz=521288629, rw=88675123;
@@ -319,10 +319,6 @@ class CutTheRoots {
 
       g_activeRootSize = g_activeRootList.size();
 
-      for (int i = 0; i < NP; i++) {
-        searchRoot(i);
-      }
-
       unordered_map<int, Polygon> polygons;
 
       for (int i = NP; i < g_PS; i++) {
@@ -361,14 +357,6 @@ class CutTheRoots {
         }
       }
 
-      for (int i = NP; i < g_PS; i++) {
-        Root *root = getRoot(i);
-        Vector *v1 = getVertex(root->from);
-        Vector *v2 = getVertex(root->to);
-
-        root->value = min(v1->value, v2->value);
-      }
-
       for (int i = 0; i < NP-1; i++) {
         Vector *v1 = getVertex(i);
 
@@ -394,6 +382,7 @@ class CutTheRoots {
       fprintf(stderr, "edge size = %d, root size = %d\n", g_edgeListSize, rsize);
 
       while (!finishCheck()) {
+        refreshJar();
         Edge edge = getBestEdge();
 
         updateLine(edge.fromY, edge.fromX, edge.toY, edge.toX);
@@ -522,7 +511,7 @@ class CutTheRoots {
         Edge *edge = getEdge(i);
 
         if (intersect(line.fromY, line.fromX, line.toY, line.toX, edge->fromY, edge->fromX, edge->toY, edge->toX)) {
-          removeCount += 101 - edge->length/10;
+          removeCount += 1001 - edge->length;
 
           edge->removed++;
         }
@@ -540,7 +529,7 @@ class CutTheRoots {
         if (edge->removed > 0) continue;
 
         if (intersect(line.fromY, line.fromX, line.toY, line.toX, edge->fromY, edge->fromX, edge->toY, edge->toX)) {
-          removeCount += 101 - edge->length/10;
+          removeCount += 1001 - edge->length;
         }
       }
 
@@ -583,9 +572,12 @@ class CutTheRoots {
           removeValue += root->value + root->length;
 
           g_updated[root->id] = g_time;
+          p3->value -= p4->value;
           root->removed++;
           cleanRoot(root->to);
         }
+
+        root->value = min(p3->value, p4->value);
 
         if (p4->depth <= g_depthLimit && root->removed == 0 && root->length > g_cutLimit) {
           g_activeRootList.push_back(root->id);
@@ -619,18 +611,42 @@ class CutTheRoots {
       return removeValue;
     }
 
+    void refreshJar() {
+      for (int i = 0; i < g_rootListSize; i++) {
+        Root *root = getRoot(i);
+        root->value = 0.0;
+      }
+
+      for (int i = 0; i < g_NP; i++) {
+        searchRoot(i);
+      }
+
+      for (int i = g_NP; i < g_PS; i++) {
+        Root *root = getRoot(i);
+        Vector *v1 = getVertex(root->from);
+        Vector *v2 = getVertex(root->to);
+
+        root->value = min(v1->value, v2->value);
+      }
+    }
+
     double searchRoot(int rootId) {
       Vector *v = getVertex(rootId);
+      v->value = 0.0;
       double value = 0.0;
 
       unordered_set<int>::iterator it = v->roots.begin();
 
       while(it != v->roots.end()) {
         int rid = (*it);
+        it++;
         Root *root = getRoot(rid);
 
-        value += searchRoot(root->to);
-        it++;
+        if (root->removed > 0) {
+          searchRoot(root->to);
+        } else {
+          value += searchRoot(root->to);
+        }
       }
 
       value += v->dist + g_branchBonus;
