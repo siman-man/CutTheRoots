@@ -223,6 +223,7 @@ int g_PS;
 int g_RC;
 int g_depthLimit;
 int g_branchBonus;
+double g_randomRate;
 int g_tryLimit;
 int g_cutLimit;
 int g_rootListSize;
@@ -398,7 +399,7 @@ class CutTheRoots {
       Edge bestEdge;
       double maxValue = -DBL_MAX;
       int y1, x1, y2, x2;
-      int checkpoint = 0.1 * g_tryLimit;
+      int checkpoint = g_randomRate * g_tryLimit;
 
       for (int i = 0; i < g_tryLimit; i++) {
         if (i <= checkpoint) {
@@ -657,6 +658,9 @@ class CutTheRoots {
       }
 
       uf.init(g_PS);
+      g_branchBonus = 5;
+      g_cutLimit = 2;
+      g_randomRate = 0.1;
 
       if (NP >= 75) {
         g_depthLimit = 4;
@@ -670,8 +674,6 @@ class CutTheRoots {
         g_depthLimit = 7;
       }
 
-      g_branchBonus = 5;
-      g_cutLimit = 2;
 
       if (g_NP >= 90) {
         g_tryLimit = 1000;
