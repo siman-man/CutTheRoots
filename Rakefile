@@ -17,7 +17,18 @@ end
 
 task :one do
   system("g++ -W -Wall -Wno-sign-compare -O2 -o #{@filename} #{@filename}.cpp")
-  system("time java -jar visualizer.jar -seed 7 -save result.png -novis -exec './#{@filename}'")
+  system("time java -jar visualizer.jar -seed 2 -save result.png -novis -exec './#{@filename}'")
+end
+
+task :cover do
+  system("g++ -W -Wall -Wno-sign-compare -o #{@filename} --coverage #{@filename}.cpp")
+  system("time java -jar visualizer.jar -seed 2 -save result.png -novis -exec './#{@filename}'")
+end
+
+task :clean do
+  system("rm *.gcda")
+  system("rm *.gcov")
+  system("rm *.gcno")
 end
 
 task :two do

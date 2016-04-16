@@ -7,3 +7,6 @@ visualizer/out
 visualizer/visualizer.iml
 *.txt
 hoge
+*.gcov
+*.gcda
+*.gcno

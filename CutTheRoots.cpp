@@ -114,11 +114,8 @@ inline bool ccw(int ay, int ax, int by, int bx, int cy, int cx) {
   return (val >= 0);
 }
 
-inline bool intersect(int y1, int x1, int y2, int x2, int y3, int x3, int y4, int x4) {
-  ll e1 = (x2-x1)*(y3-y1)-(y2-y1)*(x3-x1);
-  ll e2 = (x2-x1)*(y4-y1)-(y2-y1)*(x4-x1);
-
-  return (e1 * e2 <= 0);
+inline bool intersect(ll y1, ll x1, ll y2, ll x2, ll y3, ll x3, ll y4, ll x4) {
+  return (((x2-x1)*(y3-y1)-(y2-y1)*(x3-x1)) * ((x2-x1)*(y4-y1)-(y2-y1)*(x4-x1)) <= 0);
 }
 
 inline int ontheline(int ay, int ax, int by, int bx, int cy, int cx) {
@@ -187,8 +184,6 @@ struct Edge {
   int toY;
   int toX;
   double length;
-  int from;
-  int to;
   int removed;
 
   Edge(int fromY = -1, int fromX = -1, int toY = -1, int toX = -1) {
@@ -196,9 +191,6 @@ struct Edge {
     this->fromX = fromX;
     this->toY = toY;
     this->toX = toX;
-
-    this->from = -1;
-    this->to = -1;
     this->removed = 0;
   }
 };
@@ -252,7 +244,7 @@ int g_updated[MAX_PS];
 int g_time;
 Line g_line;
 
-vector<Edge> edgeList;
+vector<Edge> g_edgeList;
 vector<int> g_activeRootList;
 vector<int> g_convexHullVertex;
 Root rootList[MAX_PS];
@@ -318,7 +310,6 @@ class CutTheRoots {
       }
 
       g_activeRootSize = g_activeRootList.size();
-
       unordered_map<int, Polygon> polygons;
 
       for (int i = NP; i < g_PS; i++) {
@@ -367,15 +358,13 @@ class CutTheRoots {
           if (length >= 1000) continue;
 
           Edge newEdge(v1->y, v1->x, v2->y, v2->x);
-          newEdge.from = i;
-          newEdge.to = j;
           newEdge.length = length;
 
-          edgeList.push_back(newEdge);
+          g_edgeList.push_back(newEdge);
         }
       }
 
-      g_edgeListSize = edgeList.size();
+      g_edgeListSize = g_edgeList.size();
       g_vsize = g_convexHullVertex.size();
 
       int rsize = g_activeRootSize;
@@ -448,9 +437,11 @@ class CutTheRoots {
         }
 
         updateLine(y1, x1, y2, x2);
+        if (lineOnThePlant()) continue;
+
         int removeEdgeCount = removeEdgeEval(g_line);
 
-        if (removeEdgeCount > 0 && !lineOnThePlant()) {
+        if (removeEdgeCount > 0) {
           double removeValue = 0.0;
           removeValue = removeRootEval(g_line);
           double eval = -1 * removeValue / (double) removeEdgeCount;
@@ -577,8 +568,6 @@ class CutTheRoots {
           cleanRoot(root->to);
         }
 
-        root->value = min(p3->value, p4->value);
-
         if (p4->depth <= g_depthLimit && root->removed == 0 && root->length > g_cutLimit) {
           g_activeRootList.push_back(root->id);
         }
@@ -596,9 +585,7 @@ class CutTheRoots {
         int rid = getActiveRoot(i);
         Root *root = getRoot(rid);
 
-        if (root->removed > 0) {
-          continue;
-        }
+        if (root->removed > 0) continue;
 
         Vector *p3 = getVertex(root->from);
         Vector *p4 = getVertex(root->to);
@@ -642,11 +629,9 @@ class CutTheRoots {
         it++;
         Root *root = getRoot(rid);
 
-        if (root->removed > 0) {
-          searchRoot(root->to);
-        } else {
-          value += searchRoot(root->to);
-        }
+        if (root->removed > 0) continue;
+
+        value += searchRoot(root->to);
       }
 
       value += v->dist + g_branchBonus;
@@ -792,7 +777,7 @@ class CutTheRoots {
     }
 
     inline Edge* getEdge(int id) {
-      return &edgeList[id];
+      return &g_edgeList[id];
     }
 
     inline Root* getRoot(int id) {
