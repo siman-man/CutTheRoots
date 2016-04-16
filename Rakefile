@@ -32,8 +32,8 @@ task :clean do
 end
 
 task :two do
-  system("g++ -o #{@filename} #{@filename}.cpp")
-  system("time java -jar visualizer.jar -seed 8 -novis -exec './#{@filename}'")
+  system("g++ -W -Wall -Wno-sign-compare -O2 -o #{@filename} #{@filename}.cpp")
+  system("time java -jar visualizer.jar -seed 2 -novis -exec './#{@filename}'")
 end
 
 task :novis do

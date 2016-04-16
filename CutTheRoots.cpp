@@ -105,26 +105,15 @@ inline int cross(Vector &a, Vector &b){
 }
 
 inline bool ccw(int ay, int ax, int by, int bx, int cy, int cx) {
-  int y1 = by - ay;
-  int x1 = bx - ax;
-  int y2 = cy - ay;
-  int x2 = cx - ax;
-  int val = x1*y2 - y1*x2;
-
-  return (val >= 0);
+  return ((bx-ax) * (cy-ay) - (by-ay) * (cx-ax) >= 0);
 }
 
 inline bool intersect(ll y1, ll x1, ll y2, ll x2, ll y3, ll x3, ll y4, ll x4) {
-  return (((x2-x1)*(y3-y1)-(y2-y1)*(x3-x1)) * ((x2-x1)*(y4-y1)-(y2-y1)*(x4-x1)) <= 0);
+  return (((x2-x1) * (y3-y1) - (y2-y1) * (x3-x1)) * ((x2-x1) * (y4-y1) - (y2-y1) * (x4-x1)) <= 0);
 }
 
-inline int ontheline(int ay, int ax, int by, int bx, int cy, int cx) {
-  int y1 = by - ay;
-  int x1 = bx - ax;
-  int y2 = cy - ay;
-  int x2 = cx - ax;
-
-  return ((x1*y2 - y1*x2) == 0);
+inline bool ontheline(int ay, int ax, int by, int bx, int cy, int cx) {
+  return ((bx-ax) * (cy-ay) - (by-ay) * (cx-ax) == 0);
 }
 
 Polygon andrewScan(Polygon s) {
@@ -581,11 +570,9 @@ class CutTheRoots {
     double removeRootEval(Line &line) {
       double removeValue = 0.0;
 
-      for(int i = 0; i < g_activeRootSize; i++) {
+      for (int i = 0; i < g_activeRootSize; i++) {
         int rid = getActiveRoot(i);
         Root *root = getRoot(rid);
-
-        if (root->removed > 0) continue;
 
         Vector *p3 = getVertex(root->from);
         Vector *p4 = getVertex(root->to);
