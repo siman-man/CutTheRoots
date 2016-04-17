@@ -12,7 +12,6 @@ using namespace std;
 
 typedef long long ll;
 
-const int MAX_NP = 110;
 const int MAX_W = 1024;
 const int MAX_H = 1024;
 const int MAX_PS = 105110;
