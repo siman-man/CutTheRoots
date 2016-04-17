@@ -10,3 +10,4 @@ hoge
 *.gcov
 *.gcda
 *.gcno
+/*.dSYM

@@ -297,7 +297,7 @@ class CutTheRoots {
         to->dist = dist;
         to->depth = from->depth + 1;
 
-        if (to->depth > 1) {
+        if (to->depth > 0) {
           uf.unite(j, k);
         }
 
@@ -549,10 +549,10 @@ class CutTheRoots {
       return true;
     }
 
-    double removeRoot(Line &line) {
+    double removeRoot(const Line &line) {
       double removeValue = 0.0;
       g_time++;
-      g_activeRootList.clear();
+      vector<int> arl;
 
       for (int i = 0; i < g_ARC; i++) {
         int rid = getActiveRoot(i);
@@ -571,10 +571,11 @@ class CutTheRoots {
         }
 
         if (p4->depth <= g_depthLimit && root->removed == 0 && root->length > g_cutLimit) {
-          g_activeRootList.push_back(root->id);
+          arl.push_back(rid);
         }
       }
 
+      g_activeRootList = arl;
       g_ARC = g_activeRootList.size();
 
       return removeValue;

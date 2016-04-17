@@ -20,6 +20,11 @@ task :one do
   system("time java -jar visualizer.jar -seed 3 -save result.png -novis -exec './#{@filename}'")
 end
 
+task :debug do
+  system("g++ -std=c++11 -W -Wall -g -fsanitize=address -fno-omit-frame-pointer -Wno-sign-compare -O2 -o #{@filename} #{@filename}.cpp")
+  system("time java -jar visualizer.jar -seed 3 -save result.png -novis -exec './#{@filename}'")
+end
+
 task :cover do
   system("g++ -W -Wall -Wno-sign-compare -o #{@filename} --coverage #{@filename}.cpp")
   system("time java -jar visualizer.jar -seed 2 -save result.png -novis -exec './#{@filename}'")
