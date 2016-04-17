@@ -234,6 +234,8 @@ int g_updated[MAX_PS];
 int g_time;
 Line g_line;
 
+vector<Edge> g_edges;
+vector<Edge> g_bestEdges;
 vector<Edge> g_edgeList;
 vector<int> g_activeRootList;
 vector<int> g_convexHullVertex;
@@ -360,8 +362,10 @@ class CutTheRoots {
       int rsize = g_activeRootSize;
       fprintf(stderr, "edge size = %d, root size = %d\n", g_edgeListSize, rsize);
 
+      refreshJar();
+      double maxScore = 0;
+
       while (!finishCheck()) {
-        refreshJar();
         Edge edge = getBestEdge();
 
         updateLine(edge.fromY, edge.fromX, edge.toY, edge.toX);
@@ -369,12 +373,40 @@ class CutTheRoots {
         int removeCount = removeEdge(g_line);
 
         pque.push(Node(edge, removeValue / (double)removeCount));
+        refreshJar();
       }
 
-      vector<Edge> edges = cleanEdges();
+      g_edges = cleanEdges();
+      
+      int es = g_edges.size();
+      maxScore = refreshJar();
 
-      for (int i = 0; i < edges.size(); i++) {
-        Edge edge = edges[i];
+      fprintf(stderr,"maxScore = %f\n", maxScore);
+
+      for (int i = 0; i < es; i++) {
+        Edge edge = g_edges[i];
+        //fprintf(stderr,"%d: (%d, %d) -> (%d, %d)\n", i, edge.fromY, edge.fromX, edge.toY, edge.toX);
+      }
+
+      g_bestEdges = g_edges;
+
+      for (int i = 0; i < 1000; i++) {
+        int eid = xor128()%es;
+        replaceEdge(eid);
+        double score = refreshJar();
+
+        if (maxScore < score) {
+          maxScore = score;
+          fprintf(stderr,"maxScore = %f\n", maxScore);
+          g_bestEdges = g_edges;
+        }
+
+        es = g_edges.size();
+      }
+
+      for (int i = 0; i < g_bestEdges.size(); i++) {
+        Edge edge = g_bestEdges[i];
+        fprintf(stderr,"%d: (%d, %d) -> (%d, %d)\n", i, edge.fromY, edge.fromX, edge.toY, edge.toX);
 
         ret.push_back(edge.fromX);
         ret.push_back(edge.fromY);
@@ -383,6 +415,28 @@ class CutTheRoots {
       }
 
       return ret;
+    }
+
+    void resetJar() {
+      for (int i = 0; i < g_rootListSize; i++) {
+        Root *root = getRoot(i);
+        root->removed = 0;
+      }
+
+      for (int i = 0; i < g_edgeListSize; i++) {
+        Edge *edge = getEdge(i);
+        edge->removed = 0;
+      }
+
+      int esize = g_edges.size();
+
+      for (int i = 0; i < esize; i++) {
+        Edge edge = g_edges[i];
+        updateLine(edge.fromY, edge.fromX, edge.toY, edge.toX);
+
+        double removeValue = removeRoot(g_line);
+        int removeEdgeCount = removeEdge(g_line);
+      }
     }
 
     bool finishCheck() {
@@ -477,11 +531,30 @@ class CutTheRoots {
           cleanEdge(g_line);
         } else {
           pqueCopy.push(node);
+          fprintf(stderr,"(%d, %d) -> (%d, %d)\n", edge.fromY, edge.fromX, edge.toY, edge.toX);
           result.push_back(edge);
         }
       }
 
       pque = pqueCopy;
+      return result;
+    }
+
+    vector<Edge> cleanEdgesSimple() {
+      vector<Edge> result;
+      int esize = g_edges.size();
+
+      for (int i = 0; i < esize; i++) {
+        Edge edge = g_edges[i];
+        updateLine(edge.fromY, edge.fromX, edge.toY, edge.toX);
+
+        if (cleanEdge(g_line, true)) {
+          cleanEdge(g_line);
+        } else {
+          result.push_back(edge);
+        }
+      }
+
       return result;
     }
 
@@ -537,10 +610,20 @@ class CutTheRoots {
       return true;
     }
 
+    void cleanEdgeForce(Line &line) {
+      for(int i = 0; i < g_edgeListSize; i++) {
+        Edge *edge = getEdge(i);
+
+        if (intersect(line.fromY, line.fromX, line.toY, line.toX, edge->fromY, edge->fromX, edge->toY, edge->toX)) {
+          edge->removed--;
+        }
+      }
+    }
+
     double removeRoot(Line &line) {
       double removeValue = 0.0;
       g_time++;
-      g_activeRootList.clear();
+      //g_activeRootList.clear();
 
       for (int i = 0; i < g_activeRootSize; i++) {
         int rid = getActiveRoot(i);
@@ -553,17 +636,16 @@ class CutTheRoots {
           removeValue += root->value + root->length;
 
           g_updated[root->id] = g_time;
-          p3->value -= p4->value;
           root->removed++;
           cleanRoot(root->to);
         }
 
         if (p4->depth <= g_depthLimit && root->removed == 0 && root->length > g_cutLimit) {
-          g_activeRootList.push_back(root->id);
+          //g_activeRootList.push_back(root->id);
         }
       }
 
-      g_activeRootSize = g_activeRootList.size();
+      //g_activeRootSize = g_activeRootList.size();
 
       return removeValue;
     }
@@ -586,15 +668,13 @@ class CutTheRoots {
       return removeValue;
     }
 
-    void refreshJar() {
+    double refreshJar() {
       for (int i = 0; i < g_rootListSize; i++) {
         Root *root = getRoot(i);
         root->value = 0.0;
       }
 
-      for (int i = 0; i < g_NP; i++) {
-        searchRoot(i);
-      }
+      double score = calcScore();
 
       for (int i = g_NP; i < g_PS; i++) {
         Root *root = getRoot(i);
@@ -603,6 +683,18 @@ class CutTheRoots {
 
         root->value = min(v1->value, v2->value);
       }
+
+      return score;
+    }
+
+    double calcScore() {
+      double score = 0.0;
+
+      for (int i = 0; i < g_NP; i++) {
+        score += searchRoot(i);
+      }
+
+      return score;
     }
 
     double searchRoot(int rootId) {
@@ -645,6 +737,102 @@ class CutTheRoots {
       }
     }
 
+    void replaceEdge(int eid) {
+      Edge edge = g_edges[eid];
+      //resetJar();
+      //fprintf(stderr,"%d: (%d, %d) -> (%d, %d)\n", eid, edge.fromY, edge.fromX, edge.toY, edge.toX);
+      updateLine(edge.fromY, edge.fromX, edge.toY, edge.toX);
+      g_edges[eid] = Edge();
+      //removeLine(g_line);
+      resetJar();
+
+      //assert(!finishCheck());
+
+      int y1 = 0;
+      int x1 = 0; 
+      int y2 = 0;
+      int x2 = 0;
+      Edge bestEdge;
+
+      int cnt = 100;
+      double maxEval = -DBL_MAX; 
+
+      for (int i = 0; i < cnt; i++) {
+        if (i > 0) {
+          resetJar();
+          //removeLine(g_line);
+        }
+
+        y1 = xor128()%MAX_H;
+        x1 = xor128()%MAX_W;
+        y2 = xor128()%MAX_H;
+        x2 = xor128()%MAX_W;
+
+        updateLine(y1, x1, y2, x2);
+
+        double removeValue = removeRoot(g_line);
+        int removeEdgeCount = removeEdge(g_line);
+
+        double eval = -1 * removeValue / (double) removeEdgeCount;
+
+        if (!lineOnThePlant() && finishCheck() && maxEval < eval) {
+          maxEval = eval;
+          bestEdge.fromY = y1;
+          bestEdge.fromX = x1;
+          bestEdge.toX = x2;
+          bestEdge.toY = y2;
+        }
+      }
+
+      if (bestEdge.fromY != -1) {
+        fprintf(stderr,"get\n");
+        g_edges[eid] = bestEdge;
+        g_edges = cleanEdgesSimple();
+      } else {
+        //removeLine(g_line);
+        g_edges[eid] = edge;
+        updateLine(edge.fromY, edge.fromX, edge.toY, edge.toX);
+        double removeValue = removeRoot(g_line);
+        int removeCount = removeEdge(g_line);
+      }
+    }
+
+    void removeLine(Line &line) {
+      g_time++;
+      cleanEdgeForce(line);
+
+      for (int i = 0; i < g_activeRootSize; i++) {
+        int rid = getActiveRoot(i);
+        Root *root = getRoot(rid);
+
+        Vector *p3 = getVertex(root->from);
+        Vector *p4 = getVertex(root->to);
+
+        if (g_updated[root->id] != g_time && intersect(line.fromY, line.fromX, line.toY, line.toX, p3->y, p3->x, p4->y, p4->x)) {
+          g_updated[root->id] = g_time;
+          root->removed--;
+          dirtyRoot(root->to);
+        }
+      }
+    }
+
+    void dirtyRoot(int rootId) {
+      Vector *v = getVertex(rootId);
+
+      unordered_set<int>::iterator it = v->roots.begin();
+
+      while (it != v->roots.end()) {
+        int rid = (*it);
+        it++;
+
+        Root *root = getRoot(rid);
+        root->removed--;
+        g_updated[root->id] = g_time;
+
+        dirtyRoot(root->to);
+      }
+    }
+
     void init(int NP) {
       g_NP = NP;
       g_activeRootSize = 0;
@@ -653,12 +841,12 @@ class CutTheRoots {
       g_time = 1;
       memset(g_updated, 0, sizeof(g_updated));
 
-      for(int i = 0; i < MAX_H+10; i++) {
+      for (int i = 0; i < MAX_H+10; i++) {
         randomNum[i] = xor128();
       }
 
       uf.init(g_PS);
-      g_branchBonus = 5;
+      g_branchBonus = 0;
       g_cutLimit = 2;
       g_randomRate = 0.1;
 
@@ -700,6 +888,8 @@ class CutTheRoots {
       } else {
         g_tryLimit = 20000;
       }
+
+      g_tryLimit = 100;
     }
 
     void updateLine(int fromY, int fromX, int toY, int toX) {
