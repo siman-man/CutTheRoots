@@ -103,6 +103,17 @@ inline int cross(Vector &a, Vector &b){
   return a.x * b.y - a.y * b.x;
 }
 
+inline double calcArea(Polygon s) {
+  double area = 0.0;
+  int size = s.size();
+
+  for (int i = 0; i < size; i++) {
+    area += cross(s[i], s[(i+1)%size]);
+  }
+
+  return 0.5 * fabs(area);
+}
+
 inline bool ccw(int ay, int ax, int by, int bx, int cy, int cx) {
   return ((bx-ax) * (cy-ay) - (by-ay) * (cx-ax) >= 0);
 }
@@ -226,7 +237,7 @@ double g_randomRate;
 int g_tryLimit;
 int g_cutLimit;
 int g_rootListSize;
-int g_activeRootSize;
+int g_ARC;
 int g_edgeListSize;
 int g_vsize;
 int g_updated[MAX_PS];
@@ -298,8 +309,10 @@ class CutTheRoots {
         }
       }
 
-      g_activeRootSize = g_activeRootList.size();
+      g_ARC = g_activeRootList.size();
       unordered_map<int, Polygon> polygons;
+
+      directTryLimit();
 
       for (int i = NP; i < g_PS; i++) {
         int id = uf.find(i);
@@ -356,7 +369,7 @@ class CutTheRoots {
       g_edgeListSize = g_edgeList.size();
       g_vsize = g_convexHullVertex.size();
 
-      int rsize = g_activeRootSize;
+      int rsize = g_ARC;
       fprintf(stderr, "edge size = %d, root size = %d\n", g_edgeListSize, rsize);
 
       while (!finishCheck()) {
@@ -484,7 +497,7 @@ class CutTheRoots {
       return result;
     }
 
-    int removeEdge(Line &line) {
+    int removeEdge(const Line &line) {
       int removeCount = 0;
 
       for (int i = 0; i < g_edgeListSize; i++) {
@@ -500,7 +513,7 @@ class CutTheRoots {
       return removeCount;
     }
 
-    int removeEdgeEval(Line &line) {
+    int removeEdgeEval(const Line &line) {
       int removeCount = 0;
 
       for (int i = 0; i < g_edgeListSize; i++) {
@@ -516,7 +529,7 @@ class CutTheRoots {
       return removeCount;
     }
 
-    bool cleanEdge(Line &line, bool evalMode = false) {
+    bool cleanEdge(const Line &line, bool evalMode = false) {
       for(int i = 0; i < g_edgeListSize; i++) {
         Edge *edge = getEdge(i);
 
@@ -541,7 +554,7 @@ class CutTheRoots {
       g_time++;
       g_activeRootList.clear();
 
-      for (int i = 0; i < g_activeRootSize; i++) {
+      for (int i = 0; i < g_ARC; i++) {
         int rid = getActiveRoot(i);
         Root *root = getRoot(rid);
 
@@ -562,15 +575,15 @@ class CutTheRoots {
         }
       }
 
-      g_activeRootSize = g_activeRootList.size();
+      g_ARC = g_activeRootList.size();
 
       return removeValue;
     }
 
-    double removeRootEval(Line &line) {
+    double removeRootEval(const Line &line) {
       double removeValue = 0.0;
 
-      for (int i = 0; i < g_activeRootSize; i++) {
+      for (int i = 0; i < g_ARC; i++) {
         int rid = getActiveRoot(i);
         Root *root = getRoot(rid);
 
@@ -618,10 +631,10 @@ class CutTheRoots {
 
         if (root->removed > 0) continue;
 
-        value += searchRoot(root->to);
+        value += searchRoot(root->to) + g_branchBonus;
       }
 
-      value += v->dist + g_branchBonus;
+      value += v->dist;
       v->value = value;
 
       return value;
@@ -646,7 +659,7 @@ class CutTheRoots {
 
     void init(int NP) {
       g_NP = NP;
-      g_activeRootSize = 0;
+      g_ARC = 0;
       g_rootListSize = g_NP;
 
       g_time = 1;
@@ -672,8 +685,9 @@ class CutTheRoots {
       } else {
         g_depthLimit = 7;
       }
+    }
 
-
+    void directTryLimit() {
       if (g_NP >= 90) {
         g_tryLimit = 1000;
       } else if (g_NP >= 85) {
