@@ -93,7 +93,7 @@ class Vector {
     }
 };
 
-vector<Vector> vertexList;
+vector<Vector> g_vertexList;
 typedef vector<Vector> Polygon;
 
 inline int dot(Vector &a, Vector &b){
@@ -261,7 +261,7 @@ class CutTheRoots {
         v.x = points[2*i];
         v.y = points[2*i+1];
 
-        vertexList.push_back(v);
+        g_vertexList.push_back(v);
       }
 
       for (int i = NP; i < g_PS; i++) {
@@ -305,7 +305,7 @@ class CutTheRoots {
       for (int i = NP; i < g_PS; i++) {
         int id = uf.find(i);
 
-        Vector v = vertexList[i];
+        Vector v = g_vertexList[i];
 
         polygons[id].push_back(v);
       }
@@ -778,7 +778,7 @@ class CutTheRoots {
     }
 
     inline Vector* getVertex(int id) {
-      return &vertexList[id];
+      return &g_vertexList[id];
     }
 };
 

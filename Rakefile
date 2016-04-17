@@ -17,7 +17,7 @@ end
 
 task :one do
   system("g++ -std=c++11 -W -Wall -Wno-sign-compare -O2 -o #{@filename} #{@filename}.cpp")
-  system("time java -jar visualizer.jar -seed 3 -save result.png -novis -exec './#{@filename}'")
+  system("time java -jar visualizer.jar -seed 9 -save result.png -novis -exec './#{@filename}'")
 end
 
 task :cover do
