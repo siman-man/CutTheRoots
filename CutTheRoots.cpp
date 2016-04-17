@@ -96,11 +96,11 @@ vector<Vector> g_vertexList;
 typedef vector<Vector> Polygon;
 
 inline int dot(Vector &a, Vector &b){
-  return a.x * b.x + a.y * b.y;
+  return a.x*b.x+a.y*b.y;
 }
 
 inline int cross(Vector &a, Vector &b){
-  return a.x * b.y - a.y * b.x;
+  return a.x*b.y-a.y*b.x;
 }
 
 inline double calcArea(Polygon s) {
@@ -115,15 +115,15 @@ inline double calcArea(Polygon s) {
 }
 
 inline bool ccw(int ay, int ax, int by, int bx, int cy, int cx) {
-  return ((bx-ax) * (cy-ay) - (by-ay) * (cx-ax) >= 0);
+  return ((bx-ax)*(cy-ay)-(by-ay)*(cx-ax) >= 0);
 }
 
 inline bool intersect(ll y1, ll x1, ll y2, ll x2, ll y3, ll x3, ll y4, ll x4) {
-  return (((x2-x1) * (y3-y1) - (y2-y1) * (x3-x1)) * ((x2-x1) * (y4-y1) - (y2-y1) * (x4-x1)) <= 0);
+  return (((x2-x1)*(y3-y1)-(y2-y1)*(x3-x1))*((x2-x1)*(y4-y1)-(y2-y1)*(x4-x1)) <= 0);
 }
 
 inline bool ontheline(int ay, int ax, int by, int bx, int cy, int cx) {
-  return ((bx-ax) * (cy-ay) - (by-ay) * (cx-ax) == 0);
+  return ((bx-ax)*(cy-ay)-(by-ay)*(cx-ax) == 0);
 }
 
 Polygon andrewScan(Polygon s) {
@@ -216,15 +216,15 @@ struct Root {
 
 struct Node {
   Edge edge;
-  double removeValue;
+  double eval;
 
   Node(Edge &edge, double value){ 
     this->edge = edge;
-    this->removeValue = value;
+    this->eval = value;
   }
     
   bool operator >(const Node &e) const {
-    return removeValue < e.removeValue;
+    return eval < e.eval;
   }
 };
 
@@ -375,6 +375,7 @@ class CutTheRoots {
       while (!finishCheck()) {
         refreshJar();
         Edge edge = getBestEdge();
+        edge = refineEdge(edge);
 
         updateLine(edge.fromY, edge.fromX, edge.toY, edge.toX);
         double removeValue = removeRoot(g_line);
@@ -461,7 +462,71 @@ class CutTheRoots {
       return bestEdge;
     }
 
-    bool lineOnThePlant() {
+    Edge refineEdge(Edge &currentEdge) {
+      Edge bestEdge = currentEdge;
+      double maxValue = -DBL_MAX;
+      int y1, x1, y2, x2;
+      int cy = (currentEdge.fromY + currentEdge.toY) / 2;
+      int cx = (currentEdge.fromX + currentEdge.toX) / 2;
+      int tryLimit = 0.1 * g_tryLimit;
+      int firstLimit = 0.25 * tryLimit;
+      int secondLimit = 0.5 * tryLimit;
+      int thirdLimit = 0.75 * tryLimit;
+
+      for (int i = 0; i < tryLimit; i++) {
+        int val = xor128()%100;
+
+        if (i == 0) {
+          y1 = currentEdge.fromY;
+          x1 = currentEdge.fromX;
+          y2 = currentEdge.toY;
+          x2 = currentEdge.toX;
+        } else if (firstLimit < i) {
+          y1 = currentEdge.fromY;
+          x1 = currentEdge.fromX;
+          y2 = xor128()%MAX_H;
+          x2 = xor128()%MAX_W;
+        } else if (secondLimit < i) {
+          y1 = xor128()%MAX_H;
+          x1 = xor128()%MAX_W;
+          y2 = currentEdge.toY;
+          x2 = currentEdge.toX;
+        } else if (thirdLimit < i) {
+          y1 = cy;
+          x1 = cx;
+          y2 = xor128()%MAX_H;
+          x2 = xor128()%MAX_W;
+        } else {
+          y1 = xor128()%MAX_H;
+          x1 = xor128()%MAX_W;
+          y2 = cy;
+          x2 = cx;
+        }
+
+        updateLine(y1, x1, y2, x2);
+        if (lineOnThePlant()) continue;
+
+        int removeEdgeCount = removeEdgeEval(g_line);
+
+        if (removeEdgeCount > 0) {
+          double removeValue = 0.0;
+          removeValue = removeRootEval(g_line);
+          double eval = -1 * removeValue / (double) removeEdgeCount;
+
+          if (maxValue < eval) {
+            maxValue = eval;
+            bestEdge.fromY = y1;
+            bestEdge.fromX = x1;
+            bestEdge.toY = y2;
+            bestEdge.toX = x2;
+          }
+        }
+      }
+
+      return bestEdge;
+    }
+
+    inline bool lineOnThePlant() {
       for (int i = 0; i < g_NP; i++) {
         Vector *v = getVertex(i);
 
@@ -706,11 +771,11 @@ class CutTheRoots {
       if (g_NP >= 90) {
         g_tryLimit = 1000;
       } else if (g_NP >= 85) {
-        g_tryLimit = 1300;
+        g_tryLimit = 1200;
       } else if (g_NP >= 75) {
-        g_tryLimit = 1600;
+        g_tryLimit = 1500;
       } else if (g_NP >= 70) {
-        g_tryLimit = 1800;
+        g_tryLimit = 1700;
       } else if (g_NP >= 60) {
         g_tryLimit = 1900;
       } else if (g_NP >= 50) {
@@ -728,6 +793,8 @@ class CutTheRoots {
       } else {
         g_tryLimit = 20000;
       }
+
+      g_tryLimit *= 0.9;
     }
 
     void updateLine(int fromY, int fromX, int toY, int toX) {
@@ -771,15 +838,7 @@ class CutTheRoots {
       for(int i = 0; i < psize; i++) {
         Vector v1 = pol[i%psize];
         Vector v2 = pol[(i+1)%psize];
-        Root root;
-
-        if (v1.depth <= v2.depth) {
-          root.from = v1.id;
-          root.to = v2.id;
-        } else {
-          root.from = v2.id;
-          root.to = v1.id;
-        }
+        Root root(v1.id, v2.id);
 
         roots.push_back(root);
       }
