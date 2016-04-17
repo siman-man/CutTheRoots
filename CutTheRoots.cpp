@@ -615,6 +615,20 @@ class CutTheRoots {
 
         root->value = min(v1->value, v2->value);
       }
+
+      vector<int> convexList;
+
+      for (int i = 0; i < g_vsize; i++) {
+        int vid = g_convexHullVertex[i];
+        Vector *v = getVertex(vid);
+
+        if (v->value > 0) {
+          convexList.push_back(vid);
+        }
+      }
+
+      g_convexHullVertex = convexList;
+      g_vsize = g_convexHullVertex.size();
     }
 
     double searchRoot(int rootId) {
