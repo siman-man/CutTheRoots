@@ -247,6 +247,7 @@ Line g_line;
 
 vector<Edge> g_edgeList;
 vector<int> g_activeRootList;
+vector<int> g_activeRootListOrigin;
 vector<int> g_convexHullVertex;
 Root rootList[MAX_PS];
 UnionFind uf;
@@ -310,6 +311,7 @@ class CutTheRoots {
         }
       }
 
+      g_activeRootListOrigin = g_activeRootList;
       g_ARC = g_activeRootList.size();
       unordered_map<int, Polygon> polygons;
 
@@ -539,25 +541,56 @@ class CutTheRoots {
 
     vector<Edge> cleanEdges() {
       vector<Edge> result;
-      priority_queue<Node, vector<Node>, greater<Node> > pqueCopy;
       int qsize = pque.size();
 
       fprintf(stderr,"pque size = %d\n", qsize);
 
-      while (!pque.empty()) {
-        Node node = pque.top(); pque.pop();
-        Edge edge = node.edge;
-        updateLine(edge.fromY, edge.fromX, edge.toY, edge.toX);
+      bool removed = true;
 
-        if (cleanEdge(g_line, true)) {
+      while (removed) {
+        removed = false;
+        priority_queue<Node, vector<Node>, greater<Node> > pqueCopy;
+        double maxValue = -DBL_MAX;
+        Edge bestEdge;
+
+        while (!pque.empty()) {
+          Node node = pque.top(); pque.pop();
+          Edge edge = node.edge;
+          updateLine(edge.fromY, edge.fromX, edge.toY, edge.toX);
+
+          if (cleanEdge(g_line, true)) {
+            double value = rebirthRoot(g_line, true);
+
+            if (maxValue < value) {
+              if (maxValue != -DBL_MAX) {
+                pqueCopy.push(Node(bestEdge, maxValue));
+              }
+
+              maxValue = value;
+              removed = true;
+              bestEdge = edge;
+            } else {
+              pqueCopy.push(node);
+              result.push_back(edge);
+            }
+          } else {
+            pqueCopy.push(node);
+          }
+        }
+
+        pque = pqueCopy;
+
+        if (removed) {
+          updateLine(bestEdge.fromY, bestEdge.fromX, bestEdge.toY, bestEdge.toX);
           cleanEdge(g_line);
         } else {
-          pqueCopy.push(node);
-          result.push_back(edge);
+          while (!pque.empty()) {
+            Node node = pque.top(); pque.pop();
+            result.push_back(node.edge);
+          }
         }
       }
 
-      pque = pqueCopy;
       return result;
     }
 
@@ -575,6 +608,33 @@ class CutTheRoots {
       }
 
       return removeCount;
+    }
+
+    double rebirthRoot(const Line &line, bool evalMode = false) {
+      double removeValue = 0.0;
+      int rsize = g_activeRootListOrigin.size();
+
+      for (int i = 0; i < rsize; i++) {
+        int rid = g_activeRootListOrigin[i];
+        Root *root = getRoot(rid);
+
+        if (root->removed >= 2 && evalMode) continue;
+
+        Vector *p3 = getVertex(root->from);
+        Vector *p4 = getVertex(root->to);
+
+        if (intersect(line.fromY, line.fromX, line.toY, line.toX, p3->y, p3->x, p4->y, p4->x)) {
+          if (root->removed == 1 && evalMode) {
+            removeValue += dirtyRoot(root->to, evalMode) + root->length;
+          }
+
+          if (!evalMode) {
+            root->removed--;
+          }
+        }
+      }
+
+      return removeValue;
     }
 
     int removeEdgeEval(const Line &line) {
@@ -715,6 +775,39 @@ class CutTheRoots {
 
       value += v->dist;
       v->value = value;
+
+      return value;
+    }
+
+    double dirtyRoot(int rootId, bool evalMode) {
+      Vector *v = getVertex(rootId);
+      double value = 0.0;
+
+      unordered_set<int>::iterator it = v->roots.begin();
+
+      while (it != v->roots.end()) {
+        int rid = (*it);
+        it++;
+
+        Root *root = getRoot(rid);
+
+        if (evalMode) {
+          if (root->removed == 1) {
+            value += dirtyRoot(root->to, evalMode) + root->length;
+          } else {
+            dirtyRoot(root->to, evalMode);
+          }
+        } else {
+          root->removed--;
+          g_updated[root->id] = g_time;
+
+          if (root->removed == 0) {
+            value += dirtyRoot(root->to, evalMode) + root->length;
+          } else {
+            dirtyRoot(root->to, evalMode);
+          }
+        }
+      }
 
       return value;
     }
