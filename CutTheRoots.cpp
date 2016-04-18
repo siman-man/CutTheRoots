@@ -68,12 +68,14 @@ class Vector {
     int x, y;
     double value;
     double dist;
+    bool valid;
     int depth;
     unordered_set<int> roots;
 
     Vector(int y = -1, int x = -1) {
       this->value = 0.0;
       this->dist = 0.0;
+      this->valid = false;
       this->depth = 0;
       this->y = y;
       this->x = x;
@@ -549,8 +551,9 @@ class CutTheRoots {
 
       while (removed) {
         removed = false;
+        result.clear();
         priority_queue<Node, vector<Node>, greater<Node> > pqueCopy;
-        double maxValue = -DBL_MAX;
+        double minValue = DBL_MAX;
         Edge bestEdge;
 
         while (!pque.empty()) {
@@ -561,12 +564,12 @@ class CutTheRoots {
           if (cleanEdge(g_line, true)) {
             double value = rebirthRoot(g_line, true);
 
-            if (maxValue < value) {
-              if (maxValue != -DBL_MAX) {
-                pqueCopy.push(Node(bestEdge, maxValue));
+            if (minValue > value) {
+              if (minValue != DBL_MAX) {
+                pqueCopy.push(Node(bestEdge, minValue));
               }
 
-              maxValue = value;
+              minValue = value;
               removed = true;
               bestEdge = edge;
             } else {
@@ -581,8 +584,12 @@ class CutTheRoots {
         pque = pqueCopy;
 
         if (removed) {
+          fprintf(stderr, "minValue = %f\n", minValue);
+          fprintf(stderr,"(%d, %d) -> (%d, %d)\n", bestEdge.fromY, bestEdge.fromX, bestEdge.toY, bestEdge.toX);
           updateLine(bestEdge.fromY, bestEdge.fromX, bestEdge.toY, bestEdge.toX);
           cleanEdge(g_line);
+          rebirthRoot(g_line);
+          refreshJar();
         } else {
           while (!pque.empty()) {
             Node node = pque.top(); pque.pop();
@@ -613,23 +620,33 @@ class CutTheRoots {
     double rebirthRoot(const Line &line, bool evalMode = false) {
       double removeValue = 0.0;
       int rsize = g_activeRootListOrigin.size();
+      g_time++;
 
       for (int i = 0; i < rsize; i++) {
         int rid = g_activeRootListOrigin[i];
         Root *root = getRoot(rid);
 
-        if (root->removed >= 2 && evalMode) continue;
+        if (root->removed != 1 && evalMode) continue;
+        if (evalMode) {
+          assert(root->removed == 1);
+        }
 
         Vector *p3 = getVertex(root->from);
         Vector *p4 = getVertex(root->to);
 
+        if (evalMode && !p3->valid) continue;
+
         if (intersect(line.fromY, line.fromX, line.toY, line.toX, p3->y, p3->x, p4->y, p4->x)) {
           if (root->removed == 1 && evalMode) {
             removeValue += dirtyRoot(root->to, evalMode) + root->length;
-          }
-
-          if (!evalMode) {
+          } else if (!evalMode && g_updated[root->id] != g_time) {
             root->removed--;
+            assert(root->removed >= 0);
+            g_updated[root->id] = g_time;
+
+            if (root->removed == 0) {
+              dirtyRoot(root->to, evalMode);
+            }
           }
         }
       }
@@ -689,7 +706,6 @@ class CutTheRoots {
           removeValue += root->value + root->length;
 
           g_updated[root->id] = g_time;
-          p3->value -= p4->value;
           root->removed++;
           cleanRoot(root->to);
         }
@@ -730,6 +746,11 @@ class CutTheRoots {
       }
 
       for (int i = 0; i < g_NP; i++) {
+        Vector *v = getVertex(i);
+        v->valid = false;
+      }
+
+      for (int i = 0; i < g_NP; i++) {
         searchRoot(i);
       }
 
@@ -759,6 +780,7 @@ class CutTheRoots {
     double searchRoot(int rootId) {
       Vector *v = getVertex(rootId);
       v->value = 0.0;
+      v->valid = true;
       double value = 0.0;
 
       unordered_set<int>::iterator it = v->roots.begin();
@@ -768,7 +790,9 @@ class CutTheRoots {
         it++;
         Root *root = getRoot(rid);
 
-        if (root->removed > 0) continue;
+        if (root->removed > 0) {
+          continue;
+        }
 
         value += searchRoot(root->to) + g_branchBonus;
       }
@@ -783,6 +807,8 @@ class CutTheRoots {
       Vector *v = getVertex(rootId);
       double value = 0.0;
 
+      assert(!evalMode || v->valid);
+
       unordered_set<int>::iterator it = v->roots.begin();
 
       while (it != v->roots.end()) {
@@ -790,21 +816,23 @@ class CutTheRoots {
         it++;
 
         Root *root = getRoot(rid);
+        assert(root->removed > 0);
+
+        if (g_updated[root->id] == g_time) {
+          continue;
+        }
 
         if (evalMode) {
           if (root->removed == 1) {
             value += dirtyRoot(root->to, evalMode) + root->length;
-          } else {
-            dirtyRoot(root->to, evalMode);
           }
         } else {
           root->removed--;
+          assert(root->removed >= 0);
           g_updated[root->id] = g_time;
 
           if (root->removed == 0) {
             value += dirtyRoot(root->to, evalMode) + root->length;
-          } else {
-            dirtyRoot(root->to, evalMode);
           }
         }
       }
