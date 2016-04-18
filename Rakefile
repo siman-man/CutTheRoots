@@ -12,12 +12,12 @@ end
 
 task :windows do
   system("g++ -std=c++11 -W -Wall -Wno-sign-compare -O2 -o #{@filename} #{@filename}.cpp")
-  system("java -jar ./visualizer.jar -vis -save result.png -seed 10 -exec ./#{@filename}.exe")
+  system("java -jar ./visualizer.jar -novis -save result.png -seed 2787 -exec ./#{@filename}.exe")
 end
 
 task :one do
   system("g++ -std=c++11 -W -Wall -Wno-sign-compare -O2 -o #{@filename} #{@filename}.cpp")
-  system("time java -jar visualizer.jar -seed 3 -save result.png -novis -exec './#{@filename}'")
+  system("time java -jar visualizer.jar -seed 2163 -save result.png -novis -exec './#{@filename}'")
 end
 
 task :debug do
@@ -74,7 +74,9 @@ end
 task :select do
   system('rm result.txt')
   system("g++ -W -Wall -Wno-sign-compare -O2 -o #{@filename} #{@filename}.cpp")
-  array = [1, 5, 7, 13, 26, 111, 145, 159, 193, 228, 233, 235, 236, 264, 268, 269, 280, 291, 293, 305, 313, 337, 358, 361, 364, 367, 372, 377, 381, 391, 406, 447, 464, 485, 493, 514, 516, 525, 539, 547, 556, 573, 580, 606, 613, 625, 629, 667, 706, 738, 766, 773, 779, 794, 797, 806, 810, 842, 866, 870, 885, 890, 893, 900, 913, 917, 931, 936, 941, 950, 988]
+  array = [2163, 2175, 2184, 2227, 2249, 2272, 2307, 2320, 2381, 2391, 2406, 2444, 2493, 2495, 2504, 2509, 2510, 2515, 2521, 2552, 2553,
+    2566, 2573, 2590, 2597, 2599, 2601, 2603, 2615, 2617, 2632, 2647, 2671, 2675, 2676, 2685, 2712, 2718, 2751, 2752, 2776, 2787, 2804,
+    2808, 2817, 2819, 2839, 2846, 2850, 2856, 2862, 2863, 2877, 2893, 2918, 2927, 2934, 2950, 2953, 2997, ]
   array.take(10).each do |num|
     p num
     system("time java -jar ./visualizer.jar -seed #{num} -novis -exec './#{@filename}' >> result.txt")
