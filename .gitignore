@@ -10,4 +10,5 @@ hoge
 *.gcov
 *.gcda
 *.gcno
+*.exe
 /*.dSYM
