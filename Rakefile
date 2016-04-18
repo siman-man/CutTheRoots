@@ -11,8 +11,8 @@ task :run do
 end
 
 task :windows do
-  system("g++ -W -Wall -Wno-sign-compare -O2 -o #{@filename} #{@filename}.cpp")
-  system("java -jar ./visualizer.jar -vis -save result.png -seed 1 -exec ./#{@filename}.exe")
+  system("g++ -std=c++11 -W -Wall -Wno-sign-compare -O2 -o #{@filename} #{@filename}.cpp")
+  system("java -jar ./visualizer.jar -vis -save result.png -seed 10 -exec ./#{@filename}.exe")
 end
 
 task :one do
@@ -63,7 +63,7 @@ end
 
 task :sample do
   system('rm result.txt')
-  system("g++ -W -Wall -Wno-sign-compare -O2 -o #{@filename} #{@filename}.cpp")
+  system("g++ -std=c++11 -W -Wall -Wno-sign-compare -O2 -o #{@filename} #{@filename}.cpp")
   1.upto(10) do |num|
     p num
     system("time java -jar ./visualizer.jar -seed #{num} -novis -exec './#{@filename}' >> result.txt")

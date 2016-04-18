@@ -234,6 +234,7 @@ int g_RC;
 int g_depthLimit;
 int g_branchBonus;
 double g_randomRate;
+double g_refineRate;
 int g_tryLimit;
 int g_cutLimit;
 int g_rootListSize;
@@ -468,14 +469,12 @@ class CutTheRoots {
       int y1, x1, y2, x2;
       int cy = (currentEdge.fromY + currentEdge.toY) / 2;
       int cx = (currentEdge.fromX + currentEdge.toX) / 2;
-      int tryLimit = 0.1 * g_tryLimit;
+      int tryLimit = g_refineRate * g_tryLimit;
       int firstLimit = 0.25 * tryLimit;
       int secondLimit = 0.5 * tryLimit;
       int thirdLimit = 0.75 * tryLimit;
 
       for (int i = 0; i < tryLimit; i++) {
-        int val = xor128()%100;
-
         if (i == 0) {
           y1 = currentEdge.fromY;
           x1 = currentEdge.fromX;
@@ -753,6 +752,7 @@ class CutTheRoots {
       g_branchBonus = 5;
       g_cutLimit = 2;
       g_randomRate = 0.1;
+      g_refineRate = 0.1;
 
       if (NP >= 75) {
         g_depthLimit = 4;
@@ -794,7 +794,7 @@ class CutTheRoots {
         g_tryLimit = 20000;
       }
 
-      g_tryLimit *= 0.9;
+      g_tryLimit *= (1.0 - g_refineRate);
     }
 
     void updateLine(int fromY, int fromX, int toY, int toX) {
