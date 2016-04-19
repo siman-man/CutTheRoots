@@ -299,9 +299,7 @@ class CutTheRoots {
         to->dist = dist;
         to->depth = from->depth + 1;
 
-        if (to->depth > 0) {
-          uf.unite(j, k);
-        }
+        uf.unite(j, k);
 
         root.depth = to->depth;
         rootList[g_rootListSize++] = root;
@@ -630,7 +628,6 @@ class CutTheRoots {
           removeValue += root->value + root->length;
 
           g_updated[root->id] = g_time;
-          p3->value -= p4->value;
           root->removed++;
           cleanRoot(root->to);
         }
