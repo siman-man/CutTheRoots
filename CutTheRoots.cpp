@@ -756,25 +756,25 @@ class CutTheRoots {
       uf.init(g_PS);
       g_branchBonus = 5;
       g_cutLimit = 2;
-      g_randomRate = 0.1;
+      g_randomRate = 0.8;
       g_refineRate = 0.1;
 
       if (NP >= 75) {
-        g_depthLimit = 4;
-      } else if (NP >= 50) {
-        g_depthLimit = 4;
-      } else if (NP >= 30) {
-        g_depthLimit = 5;
-      } else if (NP >= 15) {
         g_depthLimit = 6;
-      } else {
+      } else if (NP >= 50) {
         g_depthLimit = 7;
+      } else if (NP >= 30) {
+        g_depthLimit = 7;
+      } else if (NP >= 15) {
+        g_depthLimit = 8;
+      } else {
+        g_depthLimit = 9;
       }
     }
 
     void directTryLimit() {
       if (g_NP >= 100) {
-        g_tryLimit = 600;
+        g_tryLimit = 700;
 
         if (g_ARC <= 7000) {
           g_tryLimit = 2800;
@@ -782,17 +782,15 @@ class CutTheRoots {
           g_tryLimit = 1000;
         }
       } else if (g_NP >= 95) {
-        g_tryLimit = 700;
+        g_tryLimit = 1500;
 
         if (g_ARC <= 6000) {
           g_tryLimit = 3000;
         } else if (g_ARC <= 7500) {
           g_tryLimit = 2500;
-        } else if (g_ARC <= 15000) {
-          g_tryLimit = 1000;
         }
       } else if (g_NP >= 90) {
-        g_tryLimit = 900;
+        g_tryLimit = 1500;
 
         if (g_ARC <= 7000) {
           g_tryLimit = 2500;
@@ -800,48 +798,32 @@ class CutTheRoots {
           g_tryLimit = 1500;
         }
       } else if (g_NP >= 85) {
-        g_tryLimit = 1000;
-
-        if (g_ARC <= 10000) {
-          g_tryLimit = 2000;
-        }
+        g_tryLimit = 2000;
       } else if (g_NP >= 80) {
-        g_tryLimit = 1200;
+        g_tryLimit = 2000;
 
         if (g_ARC <= 4000) {
           g_tryLimit = 5000;
-        } else if (g_ARC <= 10000) {
-          g_tryLimit = 2000;
         }
       } else if (g_NP >= 75) {
-        g_tryLimit = 1300;
+        g_tryLimit = 2000;
 
         if (g_ARC <= 3000) {
           g_tryLimit = 7500;
-        } else if (g_ARC <= 10000) {
-          g_tryLimit = 1500;
         }
       } else if (g_NP >= 70) {
-        g_tryLimit = 1500;
+        g_tryLimit = 2000;
 
         if (g_ARC <= 5000) {
           g_tryLimit = 4000;
-        } else if (g_ARC <= 10000) {
-          g_tryLimit = 2000;
         }
       } else if (g_NP >= 65) {
-        g_tryLimit = 1700;
-
-        if (g_ARC <= 9000) {
-          g_tryLimit = 2500;
-        }
+        g_tryLimit = 3000;
       } else if (g_NP >= 60) {
-        g_tryLimit = 1900;
+        g_tryLimit = 4000;
 
         if (g_ARC <= 4000) {
           g_tryLimit = 6000;
-        } else if (g_ARC <= 8000) {
-          g_tryLimit = 3500;
         }
       } else if (g_NP >= 55) {
         g_tryLimit = 2000;
@@ -852,11 +834,7 @@ class CutTheRoots {
           g_tryLimit = 2500;
         }
       } else if (g_NP >= 50) {
-        g_tryLimit = 2000;
-
-        if (g_ARC <= 8000) {
-          g_tryLimit = 3500;
-        }
+        g_tryLimit = 4000;
       } else if (g_NP >= 45) {
         g_tryLimit = 2000;
 
@@ -872,36 +850,26 @@ class CutTheRoots {
           g_tryLimit = 2500;
         }
       } else if (g_NP >= 40) {
-        g_tryLimit = 3200;
-
-        if (g_ARC <= 3000) {
-          g_tryLimit = 12000;
-        } else if (g_ARC <= 5000) {
-          g_tryLimit = 9000;
-        } else if (g_ARC <= 6000) {
-          g_tryLimit = 6500;
-        }
+        g_tryLimit = 8000;
       } else if (g_NP >= 35) {
-        g_tryLimit = 3500;
+        g_tryLimit = 5000;
 
         if (g_ARC <= 5000) {
-          g_tryLimit = 10000;
-        } else if (g_ARC <= 10000) {
-          g_tryLimit = 4500;
+          g_tryLimit = 15000;
         }
       } else if (g_NP >= 30) {
-        g_tryLimit = 3500;
+        g_tryLimit = 5000;
 
         if (g_ARC <= 7000) {
           g_tryLimit = 8000;
         }
       } else if (g_NP >= 25) {
-        g_tryLimit = 3800;
+        g_tryLimit = 5000;
 
         if (g_ARC <= 7000) {
           g_tryLimit = 8000;
         } else if (g_ARC <= 10000) {
-          g_tryLimit = 6000;
+          g_tryLimit = 10000;
         }
       } else if (g_NP >= 20) {
         g_tryLimit = 5000;
@@ -912,17 +880,9 @@ class CutTheRoots {
           g_tryLimit = 7500;
         }
       } else if (g_NP >= 15) {
-        g_tryLimit = 10000;
-
-        if (g_ARC <= 5000) {
-          g_tryLimit = 20000;
-        }
-      } else {
         g_tryLimit = 20000;
-
-        if (g_ARC <= 5000) {
-          g_tryLimit = 25000;
-        }
+      } else {
+        g_tryLimit = 30000;
       }
 
       g_tryLimit *= 5;
