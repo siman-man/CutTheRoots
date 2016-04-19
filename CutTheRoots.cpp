@@ -103,17 +103,6 @@ inline int cross(Vector &a, Vector &b){
   return a.x*b.y-a.y*b.x;
 }
 
-inline double calcArea(Polygon s) {
-  double area = 0.0;
-  int size = s.size();
-
-  for (int i = 0; i < size; i++) {
-    area += cross(s[i], s[(i+1)%size]);
-  }
-
-  return 0.5 * fabs(area);
-}
-
 inline bool ccw(int ay, int ax, int by, int bx, int cy, int cx) {
   return ((bx-ax)*(cy-ay)-(by-ay)*(cx-ax) >= 0);
 }
@@ -469,9 +458,8 @@ class CutTheRoots {
       int cy = (currentEdge.fromY + currentEdge.toY) / 2;
       int cx = (currentEdge.fromX + currentEdge.toX) / 2;
       int tryLimit = g_refineRate * g_tryLimit;
-      int firstLimit = 0.25 * tryLimit;
-      int secondLimit = 0.5 * tryLimit;
-      int thirdLimit = 0.75 * tryLimit;
+      int firstLimit = 0.33 * tryLimit;
+      int secondLimit = 0.66 * tryLimit;
 
       for (int i = 0; i < tryLimit; i++) {
         if (i == 0) {
@@ -489,16 +477,11 @@ class CutTheRoots {
           x1 = xor128()%MAX_W;
           y2 = currentEdge.toY;
           x2 = currentEdge.toX;
-        } else if (thirdLimit < i) {
+        } else {
           y1 = cy;
           x1 = cx;
           y2 = xor128()%MAX_H;
           x2 = xor128()%MAX_W;
-        } else {
-          y1 = xor128()%MAX_H;
-          x1 = xor128()%MAX_W;
-          y2 = cy;
-          x2 = cx;
         }
 
         updateLine(y1, x1, y2, x2);
