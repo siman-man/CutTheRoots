@@ -771,7 +771,7 @@ class CutTheRoots {
 
     void directTryLimit() {
       if (g_NP >= 100) {
-        g_tryLimit = 700;
+        g_tryLimit = 800;
 
         if (g_ARC <= 7000) {
           g_tryLimit = 2800;
@@ -791,11 +791,9 @@ class CutTheRoots {
 
         if (g_ARC <= 7000) {
           g_tryLimit = 2500;
-        } else if (g_ARC <= 12000) {
-          g_tryLimit = 1500;
         }
       } else if (g_NP >= 85) {
-        g_tryLimit = 2000;
+        g_tryLimit = 1700;
       } else if (g_NP >= 80) {
         g_tryLimit = 2000;
 
@@ -803,13 +801,13 @@ class CutTheRoots {
           g_tryLimit = 5000;
         }
       } else if (g_NP >= 75) {
-        g_tryLimit = 2000;
+        g_tryLimit = 2500;
 
         if (g_ARC <= 3000) {
           g_tryLimit = 7500;
         }
       } else if (g_NP >= 70) {
-        g_tryLimit = 2000;
+        g_tryLimit = 2500;
 
         if (g_ARC <= 5000) {
           g_tryLimit = 4000;
@@ -823,28 +821,18 @@ class CutTheRoots {
           g_tryLimit = 6000;
         }
       } else if (g_NP >= 55) {
-        g_tryLimit = 2000;
+        g_tryLimit = 3500;
 
         if (g_ARC <= 2000) {
           g_tryLimit = 15000;
-        } else if (g_ARC <= 9000) {
-          g_tryLimit = 2500;
         }
       } else if (g_NP >= 50) {
-        g_tryLimit = 4000;
+        g_tryLimit = 4500;
       } else if (g_NP >= 45) {
-        g_tryLimit = 2000;
+        g_tryLimit = 6000;
 
         if (g_ARC <= 2000) {
           g_tryLimit = 12000;
-        } else if (g_ARC <= 6000) {
-          g_tryLimit = 6000;
-        } else if (g_ARC <= 8000) {
-          g_tryLimit = 4000;
-        } else if (g_ARC <= 9000) {
-          g_tryLimit = 3000;
-        } else if (g_ARC <= 10000) {
-          g_tryLimit = 2500;
         }
       } else if (g_NP >= 40) {
         g_tryLimit = 8000;
@@ -855,34 +843,18 @@ class CutTheRoots {
           g_tryLimit = 15000;
         }
       } else if (g_NP >= 30) {
-        g_tryLimit = 5000;
-
-        if (g_ARC <= 7000) {
-          g_tryLimit = 8000;
-        }
+        g_tryLimit = 16000;
       } else if (g_NP >= 25) {
-        g_tryLimit = 5000;
-
-        if (g_ARC <= 7000) {
-          g_tryLimit = 8000;
-        } else if (g_ARC <= 10000) {
-          g_tryLimit = 10000;
-        }
+        g_tryLimit = 15000;
       } else if (g_NP >= 20) {
-        g_tryLimit = 5000;
-
-        if (g_ARC <= 3000) {
-          g_tryLimit = 10000;
-        } else if (g_ARC <= 9000) {
-          g_tryLimit = 7500;
-        }
+        g_tryLimit = 15000;
       } else if (g_NP >= 15) {
         g_tryLimit = 20000;
       } else {
-        g_tryLimit = 30000;
+        g_tryLimit = 40000;
       }
 
-      g_tryLimit *= 5;
+      g_tryLimit *= 6;
 
       g_tryLimit *= (1.0 - g_refineRate);
     }
