@@ -150,8 +150,6 @@ Polygon andrewScan(Polygon s) {
   return l;
 }
 
-int randomNum[MAX_H+10];
-
 struct Line {
   int fromY;
   int fromX;
@@ -728,10 +726,6 @@ class CutTheRoots {
 
       g_time = 1;
       memset(g_updated, 0, sizeof(g_updated));
-
-      for(int i = 0; i < MAX_H+10; i++) {
-        randomNum[i] = xor128();
-      }
 
       uf.init(g_PS);
       g_branchBonus = 5;
