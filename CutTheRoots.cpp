@@ -235,6 +235,7 @@ int g_depthLimit;
 int g_branchBonus;
 double g_randomRate;
 double g_refineRate;
+double g_minValue;
 int g_tryLimit;
 int g_cutLimit;
 int g_rootListSize;
@@ -411,7 +412,7 @@ class CutTheRoots {
 
     Edge getBestEdge() {
       Edge bestEdge;
-      double maxValue = -DBL_MAX;
+      g_minValue = DBL_MAX;
       int y1, x1, y2, x2;
       int checkpoint = g_randomRate * g_tryLimit;
 
@@ -447,11 +448,11 @@ class CutTheRoots {
 
         if (removeEdgeCount > 0) {
           double removeValue = 0.0;
-          removeValue = removeRootEval(g_line);
-          double eval = -1 * removeValue / (double) removeEdgeCount;
+          removeValue = removeRootEval(g_line, (double) removeEdgeCount);
+          double eval = removeValue / (double) removeEdgeCount;
 
-          if (maxValue < eval) {
-            maxValue = eval;
+          if (g_minValue > eval) {
+            g_minValue = eval;
             bestEdge.fromY = y1;
             bestEdge.fromX = x1;
             bestEdge.toY = y2;
@@ -465,7 +466,7 @@ class CutTheRoots {
 
     Edge refineEdge(Edge &currentEdge) {
       Edge bestEdge = currentEdge;
-      double maxValue = -DBL_MAX;
+      g_minValue = DBL_MAX;
       int y1, x1, y2, x2;
       int cy = (currentEdge.fromY + currentEdge.toY) / 2;
       int cx = (currentEdge.fromX + currentEdge.toX) / 2;
@@ -509,11 +510,11 @@ class CutTheRoots {
 
         if (removeEdgeCount > 0) {
           double removeValue = 0.0;
-          removeValue = removeRootEval(g_line);
-          double eval = -1 * removeValue / (double) removeEdgeCount;
+          removeValue = removeRootEval(g_line, (double) removeEdgeCount);
+          double eval = removeValue / (double) removeEdgeCount;
 
-          if (maxValue < eval) {
-            maxValue = eval;
+          if (g_minValue > eval) {
+            g_minValue = eval;
             bestEdge.fromY = y1;
             bestEdge.fromX = x1;
             bestEdge.toY = y2;
@@ -645,7 +646,7 @@ class CutTheRoots {
       return removeValue;
     }
 
-    double removeRootEval(const Line &line) {
+    double removeRootEval(const Line &line, double removeEdgeCount) {
       double removeValue = 0.0;
 
       for (int i = 0; i < g_ARC; i++) {
@@ -657,6 +658,10 @@ class CutTheRoots {
 
         if (intersect(line.fromY, line.fromX, line.toY, line.toX, p3->y, p3->x, p4->y, p4->x)) {
           removeValue += root->value + root->length;
+        }
+
+        if (g_minValue < removeValue / removeEdgeCount) {
+          break;
         }
       }
 
@@ -919,6 +924,8 @@ class CutTheRoots {
           g_tryLimit = 25000;
         }
       }
+
+      g_tryLimit *= 5;
 
       g_tryLimit *= (1.0 - g_refineRate);
     }
