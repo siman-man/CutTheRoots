@@ -211,11 +211,11 @@ class CutTheRoots {
       }
 
       g_edgeListSize = g_edgeList.size();
-
-      int rsize = g_ARC;
-      fprintf(stderr, "edge size = %d, root size = %d\n", g_edgeListSize, rsize);
+      fprintf(stderr, "edge size = %d, root size = %d\n", g_edgeListSize, g_ARC);
+      int turn = 0;
 
       while (!finishCheck()) {
+        turn++;
         refreshJar();
         Edge edge = getBestEdge();
         edge = refineEdge(edge);
@@ -223,8 +223,13 @@ class CutTheRoots {
         updateLine(edge.fromY, edge.fromX, edge.toY, edge.toX);
         double removeValue = removeRoot(g_line);
         int removeCount = removeEdge(g_line);
+        double eval = removeValue / (double) removeCount;
 
         pque.push(Node(edge, removeValue / (double)removeCount));
+
+        if (turn % 5 == 0) {
+          removeEdges();
+        }
       }
 
       vector<Edge> edges = cleanEdges();
@@ -354,27 +359,75 @@ class CutTheRoots {
 
     vector<Edge> cleanEdges() {
       vector<Edge> result;
+
+      bool removed = true;
+
+      while(removed) {
+        priority_queue<Node, vector<Node>, greater<Node> > pqueCopy;
+        removed = false;
+        int qsize = pque.size();
+        fprintf(stderr,"pque size = %d\n", qsize);
+
+        while (!pque.empty()) {
+          Node node = pque.top(); pque.pop();
+          Edge edge = node.edge;
+          updateLine(edge.fromY, edge.fromX, edge.toY, edge.toX);
+
+          int removeCount = cleanEdgeSimple(g_line);
+          double value = appendRoot(g_line, true);
+
+          if (cleanEdge(g_line, true)) {
+            Node cnode(edge, value);
+            pqueCopy.push(cnode);
+            removed = true;
+          } else {
+            result.push_back(edge);
+          }
+        }
+
+        if (removed) {
+          Node bnode = pqueCopy.top(); pqueCopy.pop();
+          Edge edge = bnode.edge;
+          updateLine(edge.fromY, edge.fromX, edge.toY, edge.toX);
+
+          cleanEdge(g_line);
+          appendRoot(g_line);
+          pque = pqueCopy;
+        }
+      }
+
+      return result;
+    }
+
+    void removeEdges() {
       priority_queue<Node, vector<Node>, greater<Node> > pqueCopy;
       int qsize = pque.size();
-
-      fprintf(stderr,"pque size = %d\n", qsize);
 
       while (!pque.empty()) {
         Node node = pque.top(); pque.pop();
         Edge edge = node.edge;
         updateLine(edge.fromY, edge.fromX, edge.toY, edge.toX);
 
-        if (cleanEdge(g_line, true)) {
-          cleanEdge(g_line);
-        } else {
-          pqueCopy.push(node);
-          result.push_back(edge);
-        }
+        int removeCount = cleanEdgeSimple(g_line);
+        double value = appendRoot(g_line, true);
+        Node cnode(edge, value / (double) removeCount);
+
+        pqueCopy.push(cnode);
+      }
+
+      Node node = pqueCopy.top();
+
+      if (node.eval > 0.03) {
+        pqueCopy.pop();
+        Edge edge = node.edge;
+        updateLine(edge.fromY, edge.fromX, edge.toY, edge.toX);
+        cleanEdge(g_line);
+        appendRoot(g_line);
       }
 
       pque = pqueCopy;
-      return result;
     }
+
 
     int removeEdge(const Line &line) {
       int removeCount = 0;
@@ -426,6 +479,21 @@ class CutTheRoots {
       return true;
     }
 
+    int cleanEdgeSimple(const Line &line) {
+      int removeCount = 0;
+
+      for(int i = 0; i < g_edgeListSize; i++) {
+        Edge *edge = getEdge(i);
+
+        if (intersect(line.fromY, line.fromX, line.toY, line.toX, edge->fromY, edge->fromX, edge->toY, edge->toX)) {
+          removeCount += 1001 - edge->length;
+        }
+      }
+
+      return removeCount;
+    }
+
+
     double removeRoot(const Line &line) {
       double removeValue = 0.0;
       g_time++;
@@ -451,8 +519,52 @@ class CutTheRoots {
         }
       }
 
-      g_activeRootList = arl;
-      g_ARC = g_activeRootList.size();
+      //g_activeRootList = arl;
+      //g_ARC = g_activeRootList.size();
+
+      return removeValue;
+    }
+
+    double appendRoot(const Line &line, bool evalMode = false) {
+      double removeValue = 0.0;
+      g_time++;
+      vector<int> arl;
+
+      for (int i = 0; i < g_ARC; i++) {
+        int rid = getActiveRoot(i);
+        Root *root = getRoot(rid);
+
+        if (root->removed == 0) continue;
+
+        Vector *p3 = getVertex(root->from);
+        Vector *p4 = getVertex(root->to);
+
+        if (g_updated[root->id] != g_time && intersect(line.fromY, line.fromX, line.toY, line.toX, p3->y, p3->x, p4->y, p4->x)) {
+          g_updated[rid] = g_time;
+
+          if (!evalMode) {
+            root->removed--;
+            assert(root->removed >= 0);
+
+            removeValue += root->length;
+            removeValue += dirtyRoot(root->to, evalMode);
+          } else {
+            if (root->removed == 1) {
+              removeValue += root->length;
+              removeValue += dirtyRoot(root->to, evalMode);
+            }
+          }
+        }
+
+        if (!evalMode && p4->depth <= g_depthLimit && root->removed == 0 && root->length > g_cutLimit) {
+          //arl.push_back(rid);
+        }
+      }
+
+      if (!evalMode) {
+        //g_activeRootList = arl;
+        //g_ARC = g_activeRootList.size();
+      }
 
       return removeValue;
     }
@@ -463,6 +575,8 @@ class CutTheRoots {
       for (int i = 0; i < g_ARC; i++) {
         int rid = getActiveRoot(i);
         Root *root = getRoot(rid);
+
+        if (root->removed > 0) continue;
 
         Vector *p3 = getVertex(root->from);
         Vector *p4 = getVertex(root->to);
@@ -520,16 +634,41 @@ class CutTheRoots {
       Vector *v = getVertex(rootId);
 
       int nsize = v->roots.size();
-
       for (int i = 0; i < nsize; i++) {
         int rid = v->roots[i];
 
         Root *root = getRoot(rid);
         root->removed++;
-        g_updated[root->id] = g_time;
+        g_updated[rid] = g_time;
 
         cleanRoot(root->to);
       }
+    }
+
+    double dirtyRoot(int rootId, bool modeEval) {
+      Vector *v = getVertex(rootId);
+      double value = 0.0;
+
+      int nsize = v->roots.size();
+      for (int i = 0; i < nsize; i++) {
+        int rid = v->roots[i];
+
+        Root *root = getRoot(rid);
+        g_updated[rid] = g_time;
+
+        if (!modeEval) {
+          root->removed--;
+          assert(root->removed >= 0);
+          dirtyRoot(root->to, modeEval);
+        } else {
+          if (root->removed == 1) {
+            value += root->length;
+            value += dirtyRoot(root->to, modeEval);
+          }
+        }
+      }
+
+      return value;
     }
 
     void init(int NP) {

@@ -12,7 +12,7 @@ end
 
 task :windows do
   system("g++ -std=c++11 -W -Wall -Wno-sign-compare -O2 -o #{@filename} #{@filename}.cpp")
-  system("java -jar ./visualizer.jar -novis -save result.png -seed 2 -exec ./#{@filename}.exe")
+  system("java -jar ./visualizer.jar -novis -save result.png -seed 10 -exec ./#{@filename}.exe")
 end
 
 task :one do
@@ -27,7 +27,7 @@ end
 
 task :cover do
   system("g++ -W -Wall -Wno-sign-compare -o #{@filename} --coverage #{@filename}.cpp")
-  system("time java -jar visualizer.jar -seed 2 -save result.png -novis -exec './#{@filename}'")
+  system("time java -jar visualizer.jar -seed 10 -save result.png -novis -exec './#{@filename}'")
 end
 
 task :clean do
