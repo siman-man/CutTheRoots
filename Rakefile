@@ -17,7 +17,7 @@ end
 
 task :one do
   system("g++ -std=c++11 -W -Wall -Wno-sign-compare -O2 -o #{@filename} #{@filename}.cpp")
-  system("time java -jar visualizer.jar -seed 9 -save result.png -novis -exec './#{@filename}'")
+  system("time java -jar visualizer.jar -seed 2987 -save result.png -novis -exec './#{@filename}'")
 end
 
 task :debug do
@@ -38,7 +38,7 @@ end
 
 task :two do
   system("g++ -std=c++11 -W -Wall -Wno-sign-compare -O2 -o #{@filename} #{@filename}.cpp")
-  system("time java -jar visualizer.jar -seed 3 -novis -exec './#{@filename}'")
+  system("time java -jar visualizer.jar -seed 10 -novis -exec './#{@filename}'")
 end
 
 task :novis do
@@ -53,8 +53,8 @@ end
 
 task :final do
   system('rm result.txt')
-  system("g++ -W -Wall -Wno-sign-compare -O2 -o #{@filename} #{@filename}.cpp")
-  2001.upto(2000) do |num|
+  system("g++ -std=c++11 -W -Wall -Wno-sign-compare -O2 -o #{@filename} #{@filename}.cpp")
+  2001.upto(3000) do |num|
     p num
     system("time java -jar ./visualizer.jar -seed #{num} -novis -exec './#{@filename}' >> result.txt")
   end

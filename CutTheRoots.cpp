@@ -125,7 +125,7 @@ double g_minValue;
 int g_tryLimit;
 int g_cutLimit;
 int g_rootListSize;
-int g_ARC;
+int g_activeRootCount;
 int g_edgeListSize;
 int g_updated[MAX_PS];
 int g_time;
@@ -190,7 +190,7 @@ class CutTheRoots {
         }
       }
 
-      g_ARC = g_activeRootList.size();
+      g_activeRootCount = g_activeRootList.size();
 
       directTryLimit();
 
@@ -211,11 +211,9 @@ class CutTheRoots {
       }
 
       g_edgeListSize = g_edgeList.size();
-      fprintf(stderr, "edge size = %d, root size = %d\n", g_edgeListSize, g_ARC);
-      int turn = 0;
+      fprintf(stderr, "edge size = %d, root size = %d\n", g_edgeListSize, g_activeRootCount);
 
       while (!finishCheck()) {
-        turn++;
         refreshJar();
         Edge edge = getBestEdge();
         edge = refineEdge(edge);
@@ -223,13 +221,8 @@ class CutTheRoots {
         updateLine(edge.fromY, edge.fromX, edge.toY, edge.toX);
         double removeValue = removeRoot(g_line);
         int removeCount = removeEdge(g_line);
-        double eval = removeValue / (double) removeCount;
 
         pque.push(Node(edge, removeValue / (double)removeCount));
-
-        if (turn % 5 == 0) {
-          removeEdges();
-        }
       }
 
       vector<Edge> edges = cleanEdges();
@@ -244,6 +237,75 @@ class CutTheRoots {
       }
 
       return ret;
+    }
+
+    void init(int NP) {
+      g_NP = NP;
+      g_activeRootCount = 0;
+      g_rootListSize = g_NP;
+
+      g_time = 1;
+      memset(g_updated, 0, sizeof(g_updated));
+
+      g_branchBonus = 5;
+      g_cutLimit = 2;
+      g_refineRate = 0.1;
+
+      if (NP >= 75) {
+        g_depthLimit = 6;
+      } else if (NP >= 50) {
+        g_depthLimit = 7;
+      } else if (NP >= 30) {
+        g_depthLimit = 7;
+      } else {
+        g_depthLimit = 9;
+      }
+    }
+
+    void directTryLimit() {
+      if (g_NP >= 100) {
+        g_tryLimit = 1100;
+      } else if (g_NP >= 95) {
+        g_tryLimit = 1200;
+      } else if (g_NP >= 90) {
+        g_tryLimit = 1500;
+      } else if (g_NP >= 85) {
+        g_tryLimit = 1600;
+      } else if (g_NP >= 80) {
+        g_tryLimit = 1900;
+      } else if (g_NP >= 75) {
+        g_tryLimit = 2200;
+      } else if (g_NP >= 70) {
+        g_tryLimit = 2500;
+      } else if (g_NP >= 65) {
+        g_tryLimit = 3000;
+      } else if (g_NP >= 60) {
+        g_tryLimit = 3500;
+      } else if (g_NP >= 55) {
+        g_tryLimit = 4000;
+      } else if (g_NP >= 50) {
+        g_tryLimit = 4500;
+      } else if (g_NP >= 45) {
+        g_tryLimit = 6000;
+      } else if (g_NP >= 40) {
+        g_tryLimit = 8000;
+      } else if (g_NP >= 35) {
+        g_tryLimit = 12000;
+      } else if (g_NP >= 30) {
+        g_tryLimit = 18000;
+      } else if (g_NP >= 25) {
+        g_tryLimit = 20000;
+      } else if (g_NP >= 20) {
+        g_tryLimit = 20000;
+      } else if (g_NP >= 15) {
+        g_tryLimit = 25000;
+      } else {
+        g_tryLimit = 40000;
+      }
+
+      g_tryLimit *= 6;
+
+      g_tryLimit *= (1.0 - g_refineRate);
     }
 
     bool finishCheck() {
@@ -360,32 +422,25 @@ class CutTheRoots {
     vector<Edge> cleanEdges() {
       vector<Edge> result;
 
-      bool removed = true;
-
-      while(removed) {
+      while(!pque.empty()) {
         priority_queue<Node, vector<Node>, greater<Node> > pqueCopy;
-        removed = false;
-        int qsize = pque.size();
-        fprintf(stderr,"pque size = %d\n", qsize);
 
         while (!pque.empty()) {
           Node node = pque.top(); pque.pop();
           Edge edge = node.edge;
           updateLine(edge.fromY, edge.fromX, edge.toY, edge.toX);
 
-          int removeCount = cleanEdgeSimple(g_line);
           double value = appendRoot(g_line, true);
 
           if (cleanEdge(g_line, true)) {
             Node cnode(edge, value);
             pqueCopy.push(cnode);
-            removed = true;
           } else {
             result.push_back(edge);
           }
         }
 
-        if (removed) {
+        if (!pqueCopy.empty()) {
           Node bnode = pqueCopy.top(); pqueCopy.pop();
           Edge edge = bnode.edge;
           updateLine(edge.fromY, edge.fromX, edge.toY, edge.toX);
@@ -398,36 +453,6 @@ class CutTheRoots {
 
       return result;
     }
-
-    void removeEdges() {
-      priority_queue<Node, vector<Node>, greater<Node> > pqueCopy;
-      int qsize = pque.size();
-
-      while (!pque.empty()) {
-        Node node = pque.top(); pque.pop();
-        Edge edge = node.edge;
-        updateLine(edge.fromY, edge.fromX, edge.toY, edge.toX);
-
-        int removeCount = cleanEdgeSimple(g_line);
-        double value = appendRoot(g_line, true);
-        Node cnode(edge, value / (double) removeCount);
-
-        pqueCopy.push(cnode);
-      }
-
-      Node node = pqueCopy.top();
-
-      if (node.eval > 0.03) {
-        pqueCopy.pop();
-        Edge edge = node.edge;
-        updateLine(edge.fromY, edge.fromX, edge.toY, edge.toX);
-        cleanEdge(g_line);
-        appendRoot(g_line);
-      }
-
-      pque = pqueCopy;
-    }
-
 
     int removeEdge(const Line &line) {
       int removeCount = 0;
@@ -479,27 +504,11 @@ class CutTheRoots {
       return true;
     }
 
-    int cleanEdgeSimple(const Line &line) {
-      int removeCount = 0;
-
-      for(int i = 0; i < g_edgeListSize; i++) {
-        Edge *edge = getEdge(i);
-
-        if (intersect(line.fromY, line.fromX, line.toY, line.toX, edge->fromY, edge->fromX, edge->toY, edge->toX)) {
-          removeCount += 1001 - edge->length;
-        }
-      }
-
-      return removeCount;
-    }
-
-
     double removeRoot(const Line &line) {
       double removeValue = 0.0;
       g_time++;
-      vector<int> arl;
 
-      for (int i = 0; i < g_ARC; i++) {
+      for (int i = 0; i < g_activeRootCount; i++) {
         int rid = getActiveRoot(i);
         Root *root = getRoot(rid);
 
@@ -513,14 +522,7 @@ class CutTheRoots {
           root->removed++;
           cleanRoot(root->to);
         }
-
-        if (p4->depth <= g_depthLimit && root->removed == 0 && root->length > g_cutLimit) {
-          arl.push_back(rid);
-        }
       }
-
-      //g_activeRootList = arl;
-      //g_ARC = g_activeRootList.size();
 
       return removeValue;
     }
@@ -528,9 +530,8 @@ class CutTheRoots {
     double appendRoot(const Line &line, bool evalMode = false) {
       double removeValue = 0.0;
       g_time++;
-      vector<int> arl;
 
-      for (int i = 0; i < g_ARC; i++) {
+      for (int i = 0; i < g_activeRootCount; i++) {
         int rid = getActiveRoot(i);
         Root *root = getRoot(rid);
 
@@ -542,28 +543,17 @@ class CutTheRoots {
         if (g_updated[root->id] != g_time && intersect(line.fromY, line.fromX, line.toY, line.toX, p3->y, p3->x, p4->y, p4->x)) {
           g_updated[rid] = g_time;
 
-          if (!evalMode) {
+          if (evalMode) {
+            if (root->removed == 1) {
+              removeValue += dirtyRoot(root->to, evalMode) + root->length;
+            }
+          } else {
             root->removed--;
             assert(root->removed >= 0);
 
-            removeValue += root->length;
-            removeValue += dirtyRoot(root->to, evalMode);
-          } else {
-            if (root->removed == 1) {
-              removeValue += root->length;
-              removeValue += dirtyRoot(root->to, evalMode);
-            }
+            removeValue += dirtyRoot(root->to, evalMode) + root->length;
           }
         }
-
-        if (!evalMode && p4->depth <= g_depthLimit && root->removed == 0 && root->length > g_cutLimit) {
-          //arl.push_back(rid);
-        }
-      }
-
-      if (!evalMode) {
-        //g_activeRootList = arl;
-        //g_ARC = g_activeRootList.size();
       }
 
       return removeValue;
@@ -572,7 +562,7 @@ class CutTheRoots {
     double removeRootEval(const Line &line, double removeEdgeCount) {
       double removeValue = 0.0;
 
-      for (int i = 0; i < g_ARC; i++) {
+      for (int i = 0; i < g_activeRootCount; i++) {
         int rid = getActiveRoot(i);
         Root *root = getRoot(rid);
 
@@ -656,88 +646,19 @@ class CutTheRoots {
         Root *root = getRoot(rid);
         g_updated[rid] = g_time;
 
-        if (!modeEval) {
-          root->removed--;
-          assert(root->removed >= 0);
-          dirtyRoot(root->to, modeEval);
-        } else {
+        if (modeEval) {
           if (root->removed == 1) {
             value += root->length;
             value += dirtyRoot(root->to, modeEval);
           }
+        } else {
+          root->removed--;
+          assert(root->removed >= 0);
+          dirtyRoot(root->to, modeEval);
         }
       }
 
       return value;
-    }
-
-    void init(int NP) {
-      g_NP = NP;
-      g_ARC = 0;
-      g_rootListSize = g_NP;
-
-      g_time = 1;
-      memset(g_updated, 0, sizeof(g_updated));
-
-      g_branchBonus = 5;
-      g_cutLimit = 2;
-      g_refineRate = 0.1;
-
-      if (NP >= 75) {
-        g_depthLimit = 6;
-      } else if (NP >= 50) {
-        g_depthLimit = 7;
-      } else if (NP >= 30) {
-        g_depthLimit = 7;
-      } else {
-        g_depthLimit = 9;
-      }
-    }
-
-    void directTryLimit() {
-      if (g_NP >= 100) {
-        g_tryLimit = 1100;
-      } else if (g_NP >= 95) {
-        g_tryLimit = 1200;
-      } else if (g_NP >= 90) {
-        g_tryLimit = 1500;
-      } else if (g_NP >= 85) {
-        g_tryLimit = 1600;
-      } else if (g_NP >= 80) {
-        g_tryLimit = 1900;
-      } else if (g_NP >= 75) {
-        g_tryLimit = 2200;
-      } else if (g_NP >= 70) {
-        g_tryLimit = 2500;
-      } else if (g_NP >= 65) {
-        g_tryLimit = 3000;
-      } else if (g_NP >= 60) {
-        g_tryLimit = 3500;
-      } else if (g_NP >= 55) {
-        g_tryLimit = 4000;
-      } else if (g_NP >= 50) {
-        g_tryLimit = 4500;
-      } else if (g_NP >= 45) {
-        g_tryLimit = 6000;
-      } else if (g_NP >= 40) {
-        g_tryLimit = 8000;
-      } else if (g_NP >= 35) {
-        g_tryLimit = 12000;
-      } else if (g_NP >= 30) {
-        g_tryLimit = 18000;
-      } else if (g_NP >= 25) {
-        g_tryLimit = 20000;
-      } else if (g_NP >= 20) {
-        g_tryLimit = 20000;
-      } else if (g_NP >= 15) {
-        g_tryLimit = 25000;
-      } else {
-        g_tryLimit = 40000;
-      }
-
-      g_tryLimit *= 6;
-
-      g_tryLimit *= (1.0 - g_refineRate);
     }
 
     void updateLine(int fromY, int fromX, int toY, int toX) {
